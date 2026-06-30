@@ -14,5 +14,5 @@ jobs:
       - uses: actions/checkout@v4
 
       - run: npm ci
-      - run: npx --no-install next lint
-      - run: npx --no-install next build
+      - run: npm run lint
+      - run: npm run build
