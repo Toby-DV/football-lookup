@@ -1,19 +1,49 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
+import api from "./api";
+
+
+const MatchList = () => {
+  const [matches, setMatches] = useState([]);
+
+  const fetchMatches = async () => {
+    try {
+      const response = await api.get("/api/matches");
+      setMatches(response.data.matches)
+    } catch (error){
+      console.error("Error fetching matches:", error);
+    }
+  };
+
+  const addMatch = async () => {
+    try {
+      const response = await api.post("/matches", { name : "test_match" });
+      fetchMatches(); // update match list
+    } catch (error) {
+      console.error("Error adding match:", error);
+    }
+  }
+  
+  useEffect(() => {
+    fetchMatches();
+  }, []);
+
+  return (
+    <div>
+      <h2>Match List</h2>
+      <ul>
+        {matches.map((match, index) => (
+          <li key={index}>{match}</li>
+        ))}
+      </ul>
+    </div>
+  )
+}
 
 export default function Home() {
-  const [taskText, setTaskText] = useState("");
-  const [tasks, setTasks] = useState<string[]>([]);
-
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-
-    const trimmed = taskText.trim();
-    if (!trimmed) return;
-
-    setTasks((current) => [trimmed, ...current]);
-    setTaskText("");
   };
 
   return (
@@ -31,8 +61,6 @@ export default function Home() {
           <input
             id="task-input"
             type="text"
-            value={taskText}
-            onChange={(event) => setTaskText(event.target.value)}
             placeholder="Enter a new todo"
             className="min-w-0 flex-1 rounded-2xl border border-zinc-300 bg-zinc-50 px-4 py-3 text-base outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-zinc-700 dark:bg-slate-950 dark:focus:border-slate-500 dark:focus:ring-slate-700"
           />
@@ -46,22 +74,6 @@ export default function Home() {
 
         <section className="mt-10">
           <h2 className="text-xl font-semibold">Tasks</h2>
-          {tasks.length === 0 ? (
-            <p className="mt-4 rounded-3xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-10 text-center text-zinc-500 dark:border-zinc-700 dark:bg-slate-950 dark:text-zinc-400">
-              No tasks yet. Add one above to get started.
-            </p>
-          ) : (
-            <ul className="mt-4 space-y-3">
-              {tasks.map((task, index) => (
-                <li
-                  key={`${task}-${index}`}
-                  className="rounded-3xl border border-zinc-200 bg-zinc-50 px-5 py-4 shadow-sm dark:border-zinc-800 dark:bg-slate-950"
-                >
-                  {task}
-                </li>
-              ))}
-            </ul>
-          )}
         </section>
       </main>
     </div>
