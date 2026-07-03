@@ -4,17 +4,15 @@ import { FormEvent, useEffect, useState } from "react";
 import api from "./api";
 
 
-const MatchList = ({matches} : {matches: any[]}) => {
+const MatchList = ({matches} : {matches: {name: string}[]}) => {
   return (
     <div>
       <h2 className="text-xl font-semibold mb-2">Match List</h2>
         <ul className="list-disc pl-5">
           {matches.length > 0 ? (
             matches.map((match, index) => (
-              // Assuming your match object has a 'name' property. 
-              // If it's just a string, use {match} instead.
               <li key={index} className="py-1">
-                {match.name || match}
+                {match["name"]}
               </li>
             ))
           ) : (
@@ -40,7 +38,7 @@ export default function Home() {
 
   const addMatch = async (name: string) => {
     try {
-      const response = await api.post("/matches", { name : name });
+      await api.post("/matches", { name : name });
       fetchMatches(); // update match list
     } catch (error) {
       console.error("Error adding match:", error);
@@ -48,6 +46,7 @@ export default function Home() {
   }
 
   useEffect(() => {
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   fetchMatches();
 }, []);
 
@@ -57,7 +56,7 @@ export default function Home() {
     if (inputValue.trim() !== "") {
       console.log("Submitting match:", inputValue);
       await addMatch(inputValue);
-      setInputValue(""); // Clear input field after submission
+      setInputValue("");
     }
   };
   
