@@ -4,65 +4,75 @@ import { FormEvent, useEffect, useState } from "react";
 import api from "./api";
 
 
-const MatchList = () => {
-  const [matches, setMatches] = useState([]);
-
-  const fetchMatches = async () => {
-    try {
-      const response = await api.get("/api/matches");
-      setMatches(response.data.matches)
-    } catch (error){
-      console.error("Error fetching matches:", error);
-    }
-  };
-
-  const addMatch = async () => {
-    try {
-      const response = await api.post("/matches", { name : "test_match" });
-      fetchMatches(); // update match list
-    } catch (error) {
-      console.error("Error adding match:", error);
-    }
-  }
-  
-  useEffect(() => {
-    fetchMatches();
-  }, []);
-
+const MatchList = ({matches} : {matches: any[]}) => {
   return (
     <div>
-      <h2>Match List</h2>
-      <ul>
-        {matches.map((match, index) => (
-          <li key={index}>{match}</li>
-        ))}
-      </ul>
+      <h2 className="text-xl font-semibold mb-2">Match List</h2>
+        <ul className="list-disc pl-5">
+          {matches.length > 0 ? (
+            matches.map((match, index) => (
+              // Assuming your match object has a 'name' property. 
+              // If it's just a string, use {match} instead.
+              <li key={index} className="py-1">
+                {match.name || match}
+              </li>
+            ))
+          ) : (
+            <p className="text-zinc-500">No matches found.</p>
+          )}
+        </ul>
     </div>
   )
 }
 
 export default function Home() {
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-  };
+  const [matches, setMatches] = useState([]);
+  const [inputValue, setInputValue] = useState("");
 
+  const fetchMatches = async () => {
+  try {
+    const response = await api.get("/matches");
+    setMatches(response.data.matches)
+  } catch (error){
+    console.error("Error fetching matches:", error);
+  }
+};
+
+  const addMatch = async (name: string) => {
+    try {
+      const response = await api.post("/matches", { name : name });
+      fetchMatches(); // update match list
+    } catch (error) {
+      console.error("Error adding match:", error);
+    }
+  }
+
+  useEffect(() => {
+  fetchMatches();
+}, []);
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    console.log("Form submitted with value:", inputValue);
+    event.preventDefault();
+    if (inputValue.trim() !== "") {
+      console.log("Submitting match:", inputValue);
+      await addMatch(inputValue);
+      setInputValue(""); // Clear input field after submission
+    }
+  };
+  
   return (
     <div className="flex min-h-screen flex-col items-center justify-start bg-zinc-50 px-4 py-10 text-slate-900 dark:bg-slate-950 dark:text-zinc-100">
       <main className="w-full max-w-3xl rounded-3xl border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-slate-900 sm:p-10">
-        <h1 className="text-3xl font-semibold tracking-tight">Todo List</h1>
-        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-          Add a task and press submit to add it to the list below.
-        </p>
-
+        <MatchList matches={matches} />
         <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4 sm:flex-row">
-          <label className="sr-only" htmlFor="task-input">
-            New task
-          </label>
           <input
+            className="min-w-0 flex-1 rounded-2xl border border-zinc-300 bg-zinc-50 px-4 py-3 text-base outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-zinc-700 dark:bg-slate-950 dark:focus:border-slate-500 dark:focus:ring-slate-700"
             id="task-input"
             type="text"
             placeholder="Enter a new todo"
-            className="min-w-0 flex-1 rounded-2xl border border-zinc-300 bg-zinc-50 px-4 py-3 text-base outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-zinc-700 dark:bg-slate-950 dark:focus:border-slate-500 dark:focus:ring-slate-700"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
           />
           <button
             type="submit"
@@ -71,10 +81,6 @@ export default function Home() {
             Submit
           </button>
         </form>
-
-        <section className="mt-10">
-          <h2 className="text-xl font-semibold">Tasks</h2>
-        </section>
       </main>
     </div>
   );
