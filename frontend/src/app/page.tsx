@@ -124,8 +124,10 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="flex flex-col rounded-3xl border border-slate-700 bg-slate-950/90 p-6 shadow-xl shadow-slate-950/20">
+            <div className="flex flex-col h-100 rounded-3xl border border-slate-700 bg-slate-950/90 p-6 shadow-xl shadow-slate-950/20">
+              <div className="flex-1 overflow-y-auto">
                 <MatchList matches={matches} />
+              </div>
               <form onSubmit={handleSubmit} className="mt-auto grid gap-3 sm:grid-cols-[1fr_auto]">
                 <input
                   className="rounded-3xl border border-slate-700 bg-slate-900/90 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/20"
