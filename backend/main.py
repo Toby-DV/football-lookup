@@ -4,7 +4,7 @@ from typing import List
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
-from externalAPICalls import fetch_match_data
+from backend.api_client import fetch_match_data
 
 class Match(BaseModel):
     name: str
