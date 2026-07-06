@@ -4,6 +4,8 @@ from typing import List
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
+from backend.api_client import fetch_match_data
+
 class Match(BaseModel):
     name: str
 
@@ -34,6 +36,10 @@ def read_root():
 @app.get("/matches", response_model=MatchList)
 def get_matches():
     return MatchList(matches=memory_db["matches"])
+
+@app.get("/matches/external")
+def get_external_match(match_id: int):
+    return fetch_match_data(match_id)
 
 @app.post("/matches", response_model=Match)
 def create_match(match: Match):
