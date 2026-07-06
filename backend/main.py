@@ -43,18 +43,18 @@ def get_external_match(match_id: int):
     with SessionLocal() as db:
         cache_response = db.get(MatchRecord, match_id)
 
-    if cache_response:
-        data = {
-            "id": cache_response.id,
-            "venue_name": cache_response.venue_name,
-            "home_team": cache_response.home_team,
-            "away_team": cache_response.away_team
-        }
+        if cache_response:
+            data = {
+                "id": cache_response.id,
+                "venue_name": cache_response.venue_name,
+                "home_team": cache_response.home_team,
+                "away_team": cache_response.away_team
+            }
 
-    else:
-        data = extract_match_info(fetch_match_data(match_id))
-        cache_match_record(data["id"], data["venue_name"], data["home_team"], data["away_team"])
-    
+        else:
+            data = extract_match_info(fetch_match_data(match_id))
+            cache_match_record(data["id"], data["venue_name"], data["home_team"], data["away_team"])
+        
     return data
 
 @app.post("/matches", response_model=Match)
@@ -62,12 +62,11 @@ def create_match(match: Match):
     memory_db["matches"].append(match)
     return match
 
-def cache_match_record(id, venue, home_team, away_team):
-    db = SessionLocal()
-    record = MatchRecord(id=id, venue_name=venue, home_team=home_team, away_team=away_team)
-    db.add(record)
-    db.commit()
-    db.close()
+def cache_match_record(id, venue_name, home_team, away_team):
+    record = MatchRecord(id=id, venue_name=venue_name, home_team=home_team, away_team=away_team)
+    with SessionLocal() as db:
+        db.add(record)
+        db.commit()
 
 if __name__ == "__main__":
     # print(get_external_match(124))
