@@ -2,6 +2,8 @@ import os, requests, json
 from pprint import pprint
 from typing import Any, Dict
 from dotenv import load_dotenv
+from backend.database import SessionLocal
+from backend.db_models import MatchRecord
     
 API_FOOTBALL_BASE_URL = "https://v3.football.api-sports.io"
 load_dotenv()
@@ -34,10 +36,10 @@ def extract_match_info(match_data):
     id = match_data["fixture"]["id"]
     
     return {
+        "id": id,
         "venue_name": venue_name,
         "home_team": home_team,
-        "away_team": away_team,
-        "id": id
+        "away_team": away_team
     }
 
 if __name__ == "__main__":
