@@ -6,7 +6,7 @@ from db_models import MatchRecord
 from database import SessionLocal
 from api_client import extract_match_info
 
-from backend.api_client import fetch_match_data
+from api_client import fetch_match_data
 
 class Match(BaseModel):
     name: str
