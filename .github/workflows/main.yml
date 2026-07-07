@@ -8,8 +8,23 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    steps:
 
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: demo
+          POSTGRES_PASSWORD: demo
+          POSTGRES_DB: demo
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -44,3 +59,9 @@ jobs:
           npm ci
           npm run lint
           npm run build
+
+      - name: Run backend tests
+        working-directory: ./backend
+        run: |
+            python -c "from database import Base, engine; import db_models; Base.metadata.create_all(engine)"
+            python -m pytest tests/

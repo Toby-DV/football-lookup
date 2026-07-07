@@ -1,4 +1,4 @@
-from backend.api_client import fetch_match_data, extract_match_info
+from api_client import fetch_match_data, extract_match_info
 import pytest
 from unittest.mock import patch, Mock
 
@@ -41,7 +41,7 @@ def test_fetch_match_data(monkeypatch):
     mock_response.json.return_value = {"response": ["fake data"]}
     mock_response.raise_for_status.return_value = None
     
-    with patch("backend.api_client.requests.get", return_value=mock_response) as mock_get:
+    with patch("api_client.requests.get", return_value=mock_response) as mock_get:
         result = fetch_match_data(123)
     
     assert result == {"response": ["fake data"]}
@@ -52,7 +52,7 @@ def test_fetch_match_data(monkeypatch):
         timeout=10,
     )
 
-@patch("backend.api_client.requests.get")
+@patch("api_client.requests.get")
 def test_fetch_match_data_bad_response(mock_get, monkeypatch):
     monkeypatch.setenv("API_FOOTBALL_KEY", "fake_api_key")
     mock_response = Mock()
