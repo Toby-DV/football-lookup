@@ -2,9 +2,9 @@ from fastapi import FastAPI
 from typing import List
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
-from backend.db_models import MatchRecord
-from backend.database import SessionLocal
-from backend.api_client import extract_match_info
+from db_models import MatchRecord
+from database import SessionLocal
+from api_client import extract_match_info
 
 from backend.api_client import fetch_match_data
 

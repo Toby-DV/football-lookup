@@ -1,4 +1,4 @@
-from backend.api_client import fetch_match_data, extract_match_info
+from api_client import fetch_match_data, extract_match_info
 import pytest
 from unittest.mock import patch, Mock
 
