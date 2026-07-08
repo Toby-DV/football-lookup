@@ -55,6 +55,8 @@ Backend requires a `backend/.env` file with `API_FOOTBALL_KEY` set (used by `bac
 
 **External API layer:** `backend/api_client.py` is the only module that talks to API-Football. `extract_match_info()` shapes the raw API-Football fixture response (`response[0].fixture/teams`) into a flat dict — this is the transform tested by `backend/tests/test_api_client.py` against the fixture in `backend/tests/testData.json`.
 
+**Scope: finished matches only.** This project is not built to support live/in-progress matches — it only deals with completed fixtures. That assumption is why match data (scoreline, possession, venue, teams) is treated as immutable and safe to cache indefinitely once fetched: there's no live state to keep in sync, no polling for score updates, and no need for cache invalidation/TTLs. Don't add live-match features (polling, websockets, "in-play" status handling) without revisiting this assumption first.
+
 ## CI
 
 `.github/workflows/main.yml` runs on PRs/pushes to `main`: sets up Node 24 and Python 3.14.5, installs backend deps ad hoc (not from a requirements file), starts `uvicorn main:app` in the background, then in `frontend/` runs `npm ci`, `npm run lint`, and `npm run build`. It does not currently run backend tests or frontend against the live backend beyond starting it.

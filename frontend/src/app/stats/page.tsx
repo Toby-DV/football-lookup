@@ -53,7 +53,11 @@ function StatsContent() {
     goals: {
       home: number | null;
       away: number | null;
-    }
+    };
+    shots_on_goal: {
+      home: number;
+      away: number;
+    };
   }
 
   const searchParams = useSearchParams();
@@ -97,6 +101,7 @@ function StatsContent() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void fetchMatches();
     if (matchId) {
       void getMatchInfo(matchId)

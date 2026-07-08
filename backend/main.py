@@ -56,13 +56,31 @@ def get_external_match(match_id: int):
                 "goals": {
                     "home": cache_response.home_goals,
                     "away": cache_response.away_goals
+                },
+                "possession": {
+                    "home": cache_response.home_possession,
+                    "away": cache_response.away_possession
+                },
+                "shots_on_goal": {
+                    "home": cache_response.home_shots_on_goal,
+                    "away": cache_response.away_shots_on_goal
+                },
+                "shots_total": {
+                    "home": cache_response.home_shots_total,
+                    "away": cache_response.away_shots_total
                 }
             }
 
         else:
             try:
                 data = extract_match_info(fetch_match_data(match_id))
-                cache_match_record(data["id"], data["venue_name"], data["home_team"], data["away_team"], data["goals"]["home"], data["goals"]["away"])
+                cache_match_record(
+                    data["id"], data["venue_name"], data["home_team"], data["away_team"],
+                    data["goals"]["home"], data["goals"]["away"],
+                    data["possession"]["home"], data["possession"]["away"],
+                    data["shots_on_goal"]["home"], data["shots_on_goal"]["away"],
+                    data["shots_total"]["home"], data["shots_total"]["away"],
+                )
 
             except MatchNotFoundError as e:
                 raise HTTPException(status_code=404, detail=f"Get_external_match: match not found {e}")
@@ -74,8 +92,19 @@ def create_match(match: Match):
     memory_db["matches"].append(match)
     return match
 
-def cache_match_record(id, venue_name, home_team, away_team, home_goals, away_goals):
-    record = MatchRecord(id=id, venue_name=venue_name, home_team=home_team, away_team=away_team, home_goals=home_goals, away_goals=away_goals)
+def cache_match_record(
+    id, venue_name, home_team, away_team, home_goals, away_goals,
+    home_possession, away_possession,
+    home_shots_on_goal, away_shots_on_goal,
+    home_shots_total, away_shots_total,
+):
+    record = MatchRecord(
+        id=id, venue_name=venue_name, home_team=home_team, away_team=away_team,
+        home_goals=home_goals, away_goals=away_goals,
+        home_possession=int(home_possession), away_possession=int(away_possession),
+        home_shots_on_goal=home_shots_on_goal, away_shots_on_goal=away_shots_on_goal,
+        home_shots_total=home_shots_total, away_shots_total=away_shots_total,
+    )
     with SessionLocal() as db:
         db.add(record)
         db.commit()
