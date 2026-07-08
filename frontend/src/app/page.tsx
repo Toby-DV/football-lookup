@@ -1,86 +1,47 @@
-"use client";
+﻿"use client";
 
-import { FormEvent, useEffect, useState } from "react";
-import api from "./api";
-
-
-const MatchList = ({matches} : {matches: {name: string}[]}) => {
-  return (
-    <div>
-      <h2 className="text-xl font-semibold mb-2">Match List</h2>
-        <ul className="list-disc pl-5">
-          {matches.length > 0 ? (
-            matches.map((match, index) => (
-              <li key={index} className="py-1">
-                {match["name"]}
-              </li>
-            ))
-          ) : (
-            <p className="text-zinc-500">No matches found.</p>
-          )}
-        </ul>
-    </div>
-  )
-}
+import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
-  const [matches, setMatches] = useState([]);
-  const [inputValue, setInputValue] = useState("");
+  const router = useRouter();
+  const [matchId, setMatchId] = useState("");
 
-  const fetchMatches = async () => {
-  try {
-    const response = await api.get("/matches");
-    setMatches(response.data.matches)
-  } catch (error){
-    console.error("Error fetching matches:", error);
-  }
-};
-
-  const addMatch = async (name: string) => {
-    try {
-      await api.post("/matches", { name : name });
-      fetchMatches(); // update match list
-    } catch (error) {
-      console.error("Error adding match:", error);
-    }
-  }
-
-  useEffect(() => {
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  fetchMatches();
-}, []);
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    console.log("Form submitted with value:", inputValue);
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (inputValue.trim() !== "") {
-      console.log("Submitting match:", inputValue);
-      await addMatch(inputValue);
-      setInputValue("");
+    const trimmed = matchId.trim();
+    if (trimmed !== "") {
+      router.push(`/stats?match_id=${encodeURIComponent(trimmed)}`);
     }
   };
-  
+
   return (
-    <div className="flex min-h-screen flex-col items-center justify-start bg-zinc-50 px-4 py-10 text-slate-900 dark:bg-slate-950 dark:text-zinc-100">
-      <main className="w-full max-w-3xl rounded-3xl border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-slate-900 sm:p-10">
-        <MatchList matches={matches} />
-        <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-4 sm:flex-row">
+    <div className="flex min-h-screen flex-1 items-center justify-center bg-[#071014] px-4 py-8 text-slate-100 sm:px-6 lg:px-8">
+      <div className="w-full max-w-2xl rounded-3xl border border-slate-700 bg-slate-950/80 p-10 text-center shadow-[0_0_60px_rgba(15,23,42,0.45)] backdrop-blur-xl">
+        <p className="text-xs uppercase tracking-[0.35em] text-emerald-400/80">SYSTEM ARCHIVE</p>
+        <h1 className="mt-3 text-4xl font-semibold tracking-wide text-white">Esports Match Lookup</h1>
+        <p className="mx-auto mt-4 max-w-md text-sm text-slate-400">
+          Search for a match by ID to pull its scoreline, venue, and team profiles from the archive.
+        </p>
+
+        <form onSubmit={handleSubmit} className="mt-8 grid gap-3 sm:grid-cols-[1fr_auto]">
           <input
-            className="min-w-0 flex-1 rounded-2xl border border-zinc-300 bg-zinc-50 px-4 py-3 text-base outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-200 dark:border-zinc-700 dark:bg-slate-950 dark:focus:border-slate-500 dark:focus:ring-slate-700"
-            id="task-input"
+            className="rounded-3xl border border-slate-700 bg-slate-900/90 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/20"
             type="text"
-            placeholder="Enter a new todo"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
+            inputMode="numeric"
+            placeholder="Enter match ID"
+            value={matchId}
+            onChange={(e) => setMatchId(e.target.value)}
           />
           <button
             type="submit"
-            className="inline-flex h-12 items-center justify-center rounded-2xl bg-slate-900 px-6 text-sm font-semibold text-white transition hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-slate-200"
+            className="rounded-3xl bg-emerald-500 px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400"
           >
-            Submit
+            Search
           </button>
         </form>
-      </main>
+      </div>
     </div>
   );
 }
+
