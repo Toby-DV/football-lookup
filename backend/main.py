@@ -52,7 +52,11 @@ def get_external_match(match_id: int):
                 "id": cache_response.id,
                 "venue_name": cache_response.venue_name,
                 "home_team": cache_response.home_team,
-                "away_team": cache_response.away_team
+                "away_team": cache_response.away_team,
+                "goals": {
+                    "home": cache_response.home_goals,
+                    "away": cache_response.away_goals
+                }
             }
 
         else:
