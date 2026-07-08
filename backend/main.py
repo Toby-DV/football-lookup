@@ -1,10 +1,10 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from typing import List
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from db_models import MatchRecord
 from database import SessionLocal
-from api_client import extract_match_info
+from api_client import extract_match_info, MatchNotFoundError
 
 from api_client import fetch_match_data
 
@@ -52,9 +52,13 @@ def get_external_match(match_id: int):
             }
 
         else:
-            data = extract_match_info(fetch_match_data(match_id))
-            cache_match_record(data["id"], data["venue_name"], data["home_team"], data["away_team"])
-        
+            try:
+                data = extract_match_info(fetch_match_data(match_id))
+                cache_match_record(data["id"], data["venue_name"], data["home_team"], data["away_team"])
+
+            except MatchNotFoundError as e:
+                raise HTTPException(status_code=404, detail=f"match not found {e}")
+
     return data
 
 @app.post("/matches", response_model=Match)

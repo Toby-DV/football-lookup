@@ -1,4 +1,4 @@
-from api_client import fetch_match_data, extract_match_info
+from api_client import fetch_match_data, extract_match_info, MatchNotFoundError
 import pytest
 from unittest.mock import patch, Mock
 
@@ -31,9 +31,8 @@ def test_extract_match_info(mock_api_response):
 
 def test_extract_match_info_no_data():
     invalid_data = {"response": []}
-    with pytest.raises(IndexError):
+    with pytest.raises(MatchNotFoundError):
         extract_match_info(invalid_data)
-
 
 def test_fetch_match_data(monkeypatch):
     monkeypatch.setenv("API_FOOTBALL_KEY", "fake_api_key")
