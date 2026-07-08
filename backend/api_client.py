@@ -38,13 +38,16 @@ def extract_match_info(data):
     venue_name = match_data["fixture"]["venue"]["name"]
     home_team = match_data["teams"]["home"]["name"]
     away_team = match_data["teams"]["away"]["name"]
+    goals = match_data["score"]["fulltime"]
     id = match_data["fixture"]["id"]
+
     
     return {
         "id": id,
         "venue_name": venue_name,
         "home_team": home_team,
-        "away_team": away_team
+        "away_team": away_team,
+        "goals": goals
     }
 
 if __name__ == "__main__":

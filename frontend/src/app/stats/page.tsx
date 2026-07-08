@@ -1,6 +1,8 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import axios from "axios";
 import api from "../api";
 
 const MatchList = ({ matches }: { matches: { name: string }[] }) => {
@@ -35,6 +37,29 @@ const insights = [
 ];
 
 export default function Stats() {
+  return (
+    <Suspense fallback={null}>
+      <StatsContent />
+    </Suspense>
+  );
+}
+
+function StatsContent() {
+  type MatchInfo = {
+    id: number;
+    venue_name: string;
+    home_team: string;
+    away_team: string;
+    goals: {
+      home: number | null;
+      away: number | null;
+    }
+  }
+
+  const searchParams = useSearchParams();
+  const matchId = searchParams.get("match_id");
+  const [matchInfo, setMatchInfo] = useState<MatchInfo | null>(null)
+  const [matchError, setMatchError] = useState<string | null>(null)
   const [matches, setMatches] = useState<{ name: string }[]>([]);
   const [inputValue, setInputValue] = useState("");
 
@@ -56,9 +81,27 @@ export default function Stats() {
     }
   };
 
+  const getMatchInfo = async (match_id: string) => {
+    setMatchError(null);
+    try {
+      const response = await api.get("/matches/external", { params: {match_id} });
+      setMatchInfo(response.data)
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        setMatchError(`No match found for ID ${match_id}.`);
+      } else {
+        setMatchError("Something went wrong fetching this match.");
+      }
+      console.error("Error fetching match", error)
+    }
+  }
+
   useEffect(() => {
     void fetchMatches();
-  }, []);
+    if (matchId) {
+      void getMatchInfo(matchId)
+    }
+  }, [matchId]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -74,17 +117,18 @@ export default function Stats() {
         <header className="mb-8 flex flex-col gap-4 rounded-3xl border border-slate-700 bg-slate-950/80 p-6 shadow-[0_0_60px_rgba(15,23,42,0.45)] backdrop-blur-xl">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-xs uppercase tracking-[0.35em] text-emerald-400/80">SYSTEM ARCHIVE</p>
-              <h1 className="mt-2 text-3xl font-semibold tracking-wide text-white">Esports Match Dashboard</h1>
+              <h1 className="text-3xl font-semibold tracking-wide text-white">
+                {matchError
+                  ? matchError
+                  : matchInfo
+                  ? matchInfo["home_team"] + " vs " + matchInfo["away_team"]
+                  : "Loading..."}
+              </h1>
             </div>
             <div className="flex flex-col items-start gap-2 sm:items-end">
-              <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-300">SYSTEM STATUS: STABLE</span>
-              <span className="text-xs text-slate-400">Last update: 2m ago</span>
+              <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-300">Match ID: {matchId ?? "—"}</span>
             </div>
           </div>
-          <p className="max-w-2xl text-sm text-slate-400">
-            Live esports match overview with scoreline, team profiles, match list, and player breakdown.
-          </p>
         </header>
 
         <main className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
@@ -96,12 +140,12 @@ export default function Stats() {
                     <p className="text-sm text-slate-400">Scoreline</p>
                     <div className="mt-3 flex items-center justify-between text-3xl font-semibold text-white">
                       <div className="text-right">
-                        <p>2</p>
+                        <p>{matchInfo ? matchInfo["goals"]["home"] : ""}</p>
                         <p className="text-sm font-normal text-slate-400">Red Raptors</p>
                       </div>
                       <span className="text-4xl text-emerald-400">-</span>
                       <div className="text-left">
-                        <p>1</p>
+                        <p>{matchInfo ? matchInfo["goals"]["away"] : ""}</p>
                         <p className="text-sm font-normal text-slate-400">Blue Titans</p>
                       </div>
                     </div>

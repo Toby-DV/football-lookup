@@ -10,3 +10,5 @@ class MatchRecord(Base):
     venue_name = Column(String, nullable=True)
     home_team = Column(String, nullable=False)
     away_team = Column(String, nullable=False)
+    home_goals = Column(Integer, nullable=False)
+    away_goals = Column(Integer, nullable=False)
