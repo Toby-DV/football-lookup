@@ -13,9 +13,30 @@ def mock_api_response():
                     "id": 591
                 },
                 "teams": {
-                    "home": {"name": "Manchester United"},
-                    "away": {"name": "Liverpool"}
-                }
+                    "home": {"id": 33, "name": "Manchester United"},
+                    "away": {"id": 40, "name": "Liverpool"}
+                },
+                "score": {
+                    "fulltime": {"home": 3, "away": 1}
+                },
+                "statistics": [
+                    {
+                        "team": {"id": 33},
+                        "statistics": [
+                            {"type": "Shots on Goal", "value": 5},
+                            {"type": "Total Shots", "value": 12},
+                            {"type": "Ball Possession", "value": "60%"}
+                        ]
+                    },
+                    {
+                        "team": {"id": 40},
+                        "statistics": [
+                            {"type": "Shots on Goal", "value": 3},
+                            {"type": "Total Shots", "value": 9},
+                            {"type": "Ball Possession", "value": "40%"}
+                        ]
+                    }
+                ]
             }
         ]
     }
@@ -26,7 +47,11 @@ def test_extract_match_info(mock_api_response):
         "venue_name": "Old Trafford",
         "home_team": "Manchester United",
         "away_team": "Liverpool",
-        "id": 591
+        "id": 591,
+        "goals": {"home": 3, "away": 1},
+        "possession": {"home": "60", "away": "40"},
+        "shots_on_goal": {"home": 5, "away": 3},
+        "shots_total": {"home": 12, "away": 9}
     }
 
 def test_extract_match_info_no_data():

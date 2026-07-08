@@ -29,11 +29,27 @@ def fetch_match_data(match_id: int) -> Dict[str, Any]:
     response.raise_for_status()
     return response.json()
 
+def _get_team_stats(statistics, team_id):
+    '''Find one team's statistics list within the fixture's "statistics" block, by team id.'''
+    for team_block in statistics:
+        if team_block["team"]["id"] == team_id:
+            return team_block["statistics"]
+    return None
+
+def _get_stat_value(team_statistics, stat_type):
+    '''Find a stat's value by its "type" name within one team's statistics list.'''
+    if team_statistics is None:
+        return None
+    for stat in team_statistics:
+        if stat["type"] == stat_type:
+            return stat["value"]
+    return None
+
 def extract_match_info(data):
     '''Extract relevant match information from the raw API response.'''
     if not data["response"]:
         raise MatchNotFoundError(data.get("errors"))
-    
+
     match_data = data["response"][0]
     venue_name = match_data["fixture"]["venue"]["name"]
     home_team = match_data["teams"]["home"]["name"]
@@ -41,13 +57,29 @@ def extract_match_info(data):
     goals = match_data["score"]["fulltime"]
     id = match_data["fixture"]["id"]
 
-    
+    # statistics is absent for some competitions/plans, so fall back to []
+    statistics = match_data.get("statistics") or []
+    home_stats = _get_team_stats(statistics, match_data["teams"]["home"]["id"])
+    away_stats = _get_team_stats(statistics, match_data["teams"]["away"]["id"])
+
+    home_possession = _get_stat_value(home_stats, "Ball Possession")
+    away_possession = _get_stat_value(away_stats, "Ball Possession")
+    home_possession = home_possession.replace("%", "") if home_possession is not None else None
+    away_possession = away_possession.replace("%", "") if away_possession is not None else None
+    home_shots_on_goal = _get_stat_value(home_stats, "Shots on Goal")
+    away_shots_on_goal = _get_stat_value(away_stats, "Shots on Goal")
+    home_shots_total = _get_stat_value(home_stats, "Total Shots")
+    away_shots_total = _get_stat_value(away_stats, "Total Shots")
+
     return {
         "id": id,
         "venue_name": venue_name,
         "home_team": home_team,
         "away_team": away_team,
-        "goals": goals
+        "goals": goals,
+        "possession": {"home": home_possession, "away": away_possession},
+        "shots_on_goal": {"home": home_shots_on_goal, "away": away_shots_on_goal},
+        "shots_total": {"home": home_shots_total, "away": away_shots_total}
     }
 
 if __name__ == "__main__":
