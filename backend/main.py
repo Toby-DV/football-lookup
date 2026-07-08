@@ -6,7 +6,6 @@ from database import SessionLocal, Base, engine
 from api_client import extract_match_info, MatchNotFoundError
 from db_models import MatchRecord
 
-
 from api_client import fetch_match_data
 
 class Match(BaseModel):
