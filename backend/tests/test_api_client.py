@@ -98,4 +98,3 @@ def test_fetch_match_data_no_key(monkeypatch):
     monkeypatch.delenv("API_FOOTBALL_KEY", raising=False)
     with pytest.raises(ValueError):
         fetch_match_data(123)
-    

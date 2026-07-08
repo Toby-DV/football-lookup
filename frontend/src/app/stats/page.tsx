@@ -53,6 +53,18 @@ function StatsContent() {
     goals: {
       home: number | null;
       away: number | null;
+    };
+    shots_on_goal: {
+      home: number;
+      away: number;
+    };
+    shots_total: {
+      home: number;
+      away: number;
+    };
+    possession: {
+      home: number;
+      away: number;
     }
   }
 
@@ -97,6 +109,7 @@ function StatsContent() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void fetchMatches();
     if (matchId) {
       void getMatchInfo(matchId)
@@ -141,27 +154,28 @@ function StatsContent() {
                     <div className="mt-3 flex items-center justify-between text-3xl font-semibold text-white">
                       <div className="text-right">
                         <p>{matchInfo ? matchInfo["goals"]["home"] : ""}</p>
-                        <p className="text-sm font-normal text-slate-400">Red Raptors</p>
                       </div>
                       <span className="text-4xl text-emerald-400">-</span>
                       <div className="text-left">
                         <p>{matchInfo ? matchInfo["goals"]["away"] : ""}</p>
-                        <p className="text-sm font-normal text-slate-400">Blue Titans</p>
                       </div>
                     </div>
                   </div>
                   <div className="rounded-3xl bg-slate-950/80 px-4 py-4">
                     <div className="flex items-center justify-between text-sm text-slate-400">
-                      <span>Control Time</span>
-                      <strong className="text-white">72%</strong>
+                      <div className="text-right text-base font-semibold text-white">{matchInfo ? matchInfo["shots_on_goal"]["home"] : ""}</div>
+                      <span>Shots on target</span>
+                      <div className="text-left text-base font-semibold text-white">{matchInfo ? matchInfo["shots_on_goal"]["away"] : ""}</div>
                     </div>
                     <div className="mt-3 flex items-center justify-between text-sm text-slate-400">
-                      <span>Objectives</span>
-                      <strong className="text-white">7</strong>
+                      <div className="text-right text-base font-semibold text-white">{matchInfo ? matchInfo["shots_total"]["home"] : ""}</div>
+                      <span>Total shots</span>
+                      <div className="text-left text-base font-semibold text-white">{matchInfo ? matchInfo["shots_total"]["away"]: ""}</div>
                     </div>
                     <div className="mt-3 flex items-center justify-between text-sm text-slate-400">
-                      <span>Gold Lead</span>
-                      <strong className="text-white">+4.2k</strong>
+                      <div className="text-right text-base font-semibold text-white">{matchInfo ? matchInfo["possession"]["home"] + "%" : ""}</div>
+                      <span>Possession</span>
+                      <div className="text-left text-base font-semibold text-white">{matchInfo ? matchInfo["possession"]["away"] + "%" : ""}</div>
                     </div>
                   </div>
                 </div>
