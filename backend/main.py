@@ -1,3 +1,5 @@
+import json
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from typing import List
 from pydantic import BaseModel
@@ -5,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from database import SessionLocal, Base, engine
 from api_client import extract_match_info, MatchNotFoundError
 from db_models import MatchRecord
+from insights_client import generate_match_insights
 
 from api_client import fetch_match_data
 
@@ -19,7 +22,12 @@ origins = [
     "http://localhost:3000",
 ]
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    Base.metadata.create_all(engine)
+    yield
+
+app = FastAPI(lifespan=lifespan)
 memory_db = {"matches": []}
 
 app.add_middleware(
@@ -29,10 +37,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-@app.on_event("startup")
-def on_startup():
-    Base.metadata.create_all(engine)
 
 @app.get("/")
 def read_root():
@@ -45,69 +49,73 @@ def get_matches():
 @app.get("/matches/external")
 def get_external_match(match_id: int):
     with SessionLocal() as db:
-        cache_response = db.get(MatchRecord, match_id)
-
-        if cache_response:
-            data = {
-                "id": cache_response.id,
-                "venue_name": cache_response.venue_name,
-                "home_team": cache_response.home_team,
-                "away_team": cache_response.away_team,
-                "goals": {
-                    "home": cache_response.home_goals,
-                    "away": cache_response.away_goals
-                },
-                "possession": {
-                    "home": cache_response.home_possession,
-                    "away": cache_response.away_possession
-                },
-                "shots_on_goal": {
-                    "home": cache_response.home_shots_on_goal,
-                    "away": cache_response.away_shots_on_goal
-                },
-                "shots_total": {
-                    "home": cache_response.home_shots_total,
-                    "away": cache_response.away_shots_total
-                }
-            }
-
-        else:
-            try:
-                data = extract_match_info(fetch_match_data(match_id))
-                cache_match_record(
-                    data["id"], data["venue_name"], data["home_team"], data["away_team"],
-                    data["goals"]["home"], data["goals"]["away"],
-                    data["possession"]["home"], data["possession"]["away"],
-                    data["shots_on_goal"]["home"], data["shots_on_goal"]["away"],
-                    data["shots_total"]["home"], data["shots_total"]["away"],
-                )
-
-            except MatchNotFoundError as e:
-                raise HTTPException(status_code=404, detail=f"Get_external_match: match not found {e}")
+        try:
+            record = fetch_match_record(db, match_id)
+        except MatchNotFoundError as e:
+            raise HTTPException(status_code=404, detail=f"Get_external_match: match not found {e}")
+        data = match_record_to_dict(record)
 
     return data
+
+@app.get("/matches/insights")
+def get_match_insights(match_id: int):
+    with SessionLocal() as db:
+        try:
+            record = fetch_match_record(db, match_id)
+        except MatchNotFoundError as e:
+            raise HTTPException(status_code=404, detail=f"Get_match_insights: match not found {e}")
+
+        if record.insights is None:
+            try:
+                bullets = generate_match_insights(match_record_to_dict(record))
+            except Exception as e:
+                raise HTTPException(status_code=502, detail=f"Insights generation failed: {e}")
+            record.insights = json.dumps(bullets)
+            db.commit()
+        else:
+            bullets = json.loads(record.insights)
+
+    return {"match_id": match_id, "bullets": bullets}
 
 @app.post("/matches", response_model=Match)
 def create_match(match: Match):
     memory_db["matches"].append(match)
     return match
 
-def cache_match_record(
-    id, venue_name, home_team, away_team, home_goals, away_goals,
-    home_possession, away_possession,
-    home_shots_on_goal, away_shots_on_goal,
-    home_shots_total, away_shots_total,
-):
-    record = MatchRecord(
-        id=id, venue_name=venue_name, home_team=home_team, away_team=away_team,
-        home_goals=home_goals, away_goals=away_goals,
-        home_possession=int(home_possession), away_possession=int(away_possession),
-        home_shots_on_goal=home_shots_on_goal, away_shots_on_goal=away_shots_on_goal,
-        home_shots_total=home_shots_total, away_shots_total=away_shots_total,
-    )
-    with SessionLocal() as db:
+def fetch_match_record(db, match_id: int) -> MatchRecord:
+    """Return the cached MatchRecord, fetching from API-Football / caching on a cache miss."""
+    record = db.get(MatchRecord, match_id)
+    if record is None:
+        data = extract_match_info(fetch_match_data(match_id)) # fetch externally
+        record = MatchRecord(
+            id=data["id"], venue_name=data["venue_name"],
+            home_team=data["home_team"], away_team=data["away_team"],
+            date=data["date"], league=data["league"],
+            home_goals=data["goals"]["home"], away_goals=data["goals"]["away"],
+            home_possession=int(data["possession"]["home"]),
+            away_possession=int(data["possession"]["away"]),
+            home_shots_on_goal=data["shots_on_goal"]["home"],
+            away_shots_on_goal=data["shots_on_goal"]["away"],
+            home_shots_total=data["shots_total"]["home"],
+            away_shots_total=data["shots_total"]["away"],
+        )
         db.add(record)
         db.commit()
+    return record
+
+def match_record_to_dict(record: MatchRecord) -> dict:
+    return {
+        "id": record.id,
+        "venue_name": record.venue_name,
+        "home_team": record.home_team,
+        "away_team": record.away_team,
+        "date": record.date,
+        "league": record.league,
+        "goals": {"home": record.home_goals, "away": record.away_goals},
+        "possession": {"home": record.home_possession, "away": record.away_possession},
+        "shots_on_goal": {"home": record.home_shots_on_goal, "away": record.away_shots_on_goal},
+        "shots_total": {"home": record.home_shots_total, "away": record.away_shots_total},
+    }
 
 if __name__ == "__main__":
     # print(get_external_match(124))
