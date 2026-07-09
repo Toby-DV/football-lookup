@@ -36,6 +36,12 @@ def _get_team_stats(statistics, team_id):
             return team_block["statistics"]
     return None
 
+def _get_team_players(players, team_id):
+    for team_block in players:
+        if team_block["team"]["id"] == team_id:
+            return team_block["players"]
+    return None
+
 def _get_stat_value(team_statistics, stat_type):
     '''Find a stat's value by its "type" name within one team's statistics list.'''
     if team_statistics is None:
@@ -56,6 +62,8 @@ def extract_match_info(data):
     away_team = match_data["teams"]["away"]["name"]
     goals = match_data["score"]["fulltime"]
     id = match_data["fixture"]["id"]
+    date = match_data["fixture"].get("date")
+    league = (match_data.get("league") or {}).get("name")
 
     # statistics is absent for some competitions/plans, so fall back to []
     statistics = match_data.get("statistics") or []
@@ -76,6 +84,8 @@ def extract_match_info(data):
         "venue_name": venue_name,
         "home_team": home_team,
         "away_team": away_team,
+        "date": date,
+        "league": league,
         "goals": goals,
         "possession": {"home": home_possession, "away": away_possession},
         "shots_on_goal": {"home": home_shots_on_goal, "away": away_shots_on_goal},

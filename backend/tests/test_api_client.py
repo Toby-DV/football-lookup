@@ -10,8 +10,10 @@ def mock_api_response():
             {
                 "fixture": {
                     "venue": {"name": "Old Trafford"},
-                    "id": 591
+                    "id": 591,
+                    "date": "2024-04-07T15:30:00+00:00"
                 },
+                "league": {"name": "Premier League"},
                 "teams": {
                     "home": {"id": 33, "name": "Manchester United"},
                     "away": {"id": 40, "name": "Liverpool"}
@@ -48,11 +50,18 @@ def test_extract_match_info(mock_api_response):
         "home_team": "Manchester United",
         "away_team": "Liverpool",
         "id": 591,
+        "date": "2024-04-07T15:30:00+00:00",
+        "league": "Premier League",
         "goals": {"home": 3, "away": 1},
         "possession": {"home": "60", "away": "40"},
         "shots_on_goal": {"home": 5, "away": 3},
         "shots_total": {"home": 12, "away": 9}
     }
+
+def test_extract_match_info_missing_league(mock_api_response):
+    del mock_api_response["response"][0]["league"]
+    extracted_info = extract_match_info(mock_api_response)
+    assert extracted_info["league"] is None
 
 def test_extract_match_info_no_data():
     invalid_data = {"response": []}

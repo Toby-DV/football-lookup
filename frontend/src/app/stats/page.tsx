@@ -30,12 +30,6 @@ const topPerformers = [
   { name: "Nova", role: "Jungle", team: "Red Raptors", score: "12 objectives" },
 ];
 
-const insights = [
-  "Red Raptors controlled vision across the map for 72% of the match.",
-  "Blue Titans responded with a strong late-game rotation after losing point control.",
-  "Momentum shifted after the 3rd minute teamfight, giving Red Raptors sustained pressure.",
-];
-
 export default function Stats() {
   return (
     <Suspense fallback={null}>
@@ -74,6 +68,9 @@ function StatsContent() {
   const [matchError, setMatchError] = useState<string | null>(null)
   const [matches, setMatches] = useState<{ name: string }[]>([]);
   const [inputValue, setInputValue] = useState("");
+  const [insights, setInsights] = useState<string[] | null>(null);
+  const [insightsLoading, setInsightsLoading] = useState(false);
+  const [insightsError, setInsightsError] = useState<string | null>(null);
 
   const fetchMatches = async () => {
     try {
@@ -93,11 +90,28 @@ function StatsContent() {
     }
   };
 
+  const getInsights = async (match_id: string) => {
+    setInsights(null);
+    setInsightsError(null);
+    setInsightsLoading(true);
+    try {
+      const response = await api.get("/matches/insights", { params: {match_id} });
+      setInsights(response.data.bullets);
+    } catch (error) {
+      setInsightsError("Couldn't generate insights for this match.");
+      console.error("Error fetching insights", error);
+    } finally {
+      setInsightsLoading(false);
+    }
+  }
+
   const getMatchInfo = async (match_id: string) => {
     setMatchError(null);
     try {
       const response = await api.get("/matches/external", { params: {match_id} });
       setMatchInfo(response.data)
+      // Fire-and-forget: insights generation can take a minute on first view
+      void getInsights(match_id);
     } catch (error) {
       if (axios.isAxiosError(error) && error.response?.status === 404) {
         setMatchError(`No match found for ID ${match_id}.`);
@@ -299,11 +313,19 @@ function StatsContent() {
             <div className="rounded-3xl border border-slate-700 bg-slate-950/90 p-6 shadow-xl shadow-slate-950/20">
               <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Additional Insights</p>
               <div className="mt-5 space-y-3 text-sm text-slate-400">
-                {insights.map((note, index) => (
-                  <div key={index} className="rounded-3xl border border-slate-800 bg-slate-900/85 px-4 py-4">
-                    {note}
-                  </div>
-                ))}
+                {insightsLoading ? (
+                  <p className="animate-pulse">Generating insights… the first view of a match can take a minute.</p>
+                ) : insightsError ? (
+                  <p>{insightsError}</p>
+                ) : insights && insights.length > 0 ? (
+                  insights.map((note, index) => (
+                    <div key={index} className="rounded-3xl border border-slate-800 bg-slate-900/85 px-4 py-4">
+                      {note}
+                    </div>
+                  ))
+                ) : (
+                  <p>Look up a match to see what this game meant at the time.</p>
+                )}
               </div>
             </div>
         </main>
