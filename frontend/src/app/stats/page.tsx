@@ -1,25 +1,103 @@
 "use client";
 
-import { FormEvent, Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import axios from "axios";
 import api from "../api";
 
-const MatchList = ({ matches }: { matches: { name: string }[] }) => {
+type LineupPlayer = { number: number; name: string; position: string; x: number; y: number };
+type TeamLineup = { team: string; formation: string; players: LineupPlayer[] };
+
+const lineups: TeamLineup[] = [
+  {
+    team: "Red Raptors",
+    formation: "4-3-3",
+    players: [
+      { number: 1, name: "Marsh", position: "GK", x: 50, y: 90 },
+      { number: 2, name: "Alden", position: "LB", x: 15, y: 68 },
+      { number: 4, name: "Cross", position: "CB", x: 38, y: 72 },
+      { number: 5, name: "Wray", position: "CB", x: 62, y: 72 },
+      { number: 3, name: "Feld", position: "RB", x: 85, y: 68 },
+      { number: 8, name: "Doyle", position: "CM", x: 25, y: 45 },
+      { number: 6, name: "Kade", position: "CM", x: 50, y: 40 },
+      { number: 10, name: "Ronan", position: "CM", x: 75, y: 45 },
+      { number: 11, name: "Nova", position: "LW", x: 18, y: 15 },
+      { number: 9, name: "Razor", position: "ST", x: 50, y: 10 },
+      { number: 7, name: "Vance", position: "RW", x: 82, y: 15 },
+    ],
+  },
+  {
+    team: "Blue Titans",
+    formation: "4-3-3",
+    players: [
+      { number: 1, name: "Holt", position: "GK", x: 50, y: 90 },
+      { number: 2, name: "Ghost", position: "LB", x: 15, y: 68 },
+      { number: 5, name: "Brant", position: "CB", x: 38, y: 72 },
+      { number: 4, name: "Silva", position: "CB", x: 62, y: 72 },
+      { number: 3, name: "Kirk", position: "RB", x: 85, y: 68 },
+      { number: 6, name: "Adler", position: "CM", x: 25, y: 45 },
+      { number: 8, name: "Reyes", position: "CM", x: 50, y: 40 },
+      { number: 10, name: "Finch", position: "CM", x: 75, y: 45 },
+      { number: 7, name: "Sable", position: "LW", x: 18, y: 15 },
+      { number: 9, name: "Draven", position: "ST", x: 50, y: 10 },
+      { number: 11, name: "Wilder", position: "RW", x: 82, y: 15 },
+    ],
+  },
+];
+
+const LineupViewer = () => {
+  const [activeTeamIndex, setActiveTeamIndex] = useState(0);
+  const lineup = lineups[activeTeamIndex];
+
+  const goToTeam = (direction: -1 | 1) => {
+    setActiveTeamIndex((prev) => (prev + direction + lineups.length) % lineups.length);
+  };
+
   return (
-    <div>
-      <h2 className="text-xl font-semibold mb-4 text-white">Match List</h2>
-      <ul className="space-y-3">
-        {matches.length > 0 ? (
-          matches.map((match, index) => (
-            <li key={index} className="rounded-3xl border border-slate-700 bg-slate-900/80 px-4 py-3 text-slate-200">
-              {match.name}
-            </li>
-          ))
-        ) : (
-          <p className="text-slate-400">No matches found.</p>
-        )}
-      </ul>
+    <div className="flex h-full flex-col">
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => goToTeam(-1)}
+          aria-label="Previous team"
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-700 bg-slate-900/90 text-slate-200 transition hover:border-emerald-400 hover:text-emerald-300"
+        >
+          &#8592;
+        </button>
+        <div className="text-center">
+          <p className="text-sm font-semibold text-white">{lineup.team}</p>
+          <p className="text-xs uppercase tracking-[0.25em] text-slate-400">{lineup.formation}</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => goToTeam(1)}
+          aria-label="Next team"
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-700 bg-slate-900/90 text-slate-200 transition hover:border-emerald-400 hover:text-emerald-300"
+        >
+          &#8594;
+        </button>
+      </div>
+
+      <div className="relative mt-4 flex-1 overflow-hidden rounded-2xl border border-emerald-900/60 bg-gradient-to-b from-emerald-800/50 to-emerald-950/60">
+        <div className="absolute left-0 right-0 top-1/2 h-px -translate-y-1/2 bg-emerald-100/20" />
+        <div className="absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full border border-emerald-100/20" />
+
+        {lineup.players.map((player) => (
+          <div
+            key={player.number}
+            className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1"
+            style={{ left: `${player.x}%`, top: `${player.y}%` }}
+          >
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-950/90 text-xs font-semibold text-emerald-300 ring-1 ring-emerald-400/40">
+              {player.number}
+            </div>
+            <div className="text-center leading-tight">
+              <p className="text-[11px] font-medium text-white">{player.name}</p>
+              <p className="text-[10px] text-slate-300/80">{player.position}</p>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
@@ -66,29 +144,9 @@ function StatsContent() {
   const matchId = searchParams.get("match_id");
   const [matchInfo, setMatchInfo] = useState<MatchInfo | null>(null)
   const [matchError, setMatchError] = useState<string | null>(null)
-  const [matches, setMatches] = useState<{ name: string }[]>([]);
-  const [inputValue, setInputValue] = useState("");
   const [insights, setInsights] = useState<string[] | null>(null);
   const [insightsLoading, setInsightsLoading] = useState(false);
   const [insightsError, setInsightsError] = useState<string | null>(null);
-
-  const fetchMatches = async () => {
-    try {
-      const response = await api.get("/matches");
-      setMatches(response.data.matches);
-    } catch (error) {
-      console.error("Error fetching matches:", error);
-    }
-  };
-
-  const addMatch = async (name: string) => {
-    try {
-      await api.post("/matches", { name });
-      fetchMatches();
-    } catch (error) {
-      console.error("Error adding match:", error);
-    }
-  };
 
   const getInsights = async (match_id: string) => {
     setInsights(null);
@@ -123,20 +181,10 @@ function StatsContent() {
   }
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void fetchMatches();
     if (matchId) {
       void getMatchInfo(matchId)
     }
   }, [matchId]);
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (inputValue.trim() !== "") {
-      await addMatch(inputValue);
-      setInputValue("");
-    }
-  };
 
   return (
     <div className="min-h-screen bg-[#071014] text-slate-100">
@@ -196,25 +244,8 @@ function StatsContent() {
               </div>
             </div>
 
-            <div className="flex flex-col h-100 rounded-3xl border border-slate-700 bg-slate-950/90 p-6 shadow-xl shadow-slate-950/20">
-              <div className="flex-1 overflow-y-auto">
-                <MatchList matches={matches} />
-              </div>
-              <form onSubmit={handleSubmit} className="mt-auto grid gap-3 sm:grid-cols-[1fr_auto]">
-                <input
-                  className="rounded-3xl border border-slate-700 bg-slate-900/90 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/20"
-                  type="text"
-                  placeholder="Add a new match"
-                  value={inputValue}
-                  onChange={(e) => setInputValue(e.target.value)}
-                />
-                <button
-                  type="submit"
-                  className="mt-auto rounded-3xl bg-emerald-500 px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-400"
-                >
-                  Submit
-                </button>
-              </form>
+            <div className="flex h-100 flex-col rounded-3xl border border-slate-700 bg-slate-950/90 p-6 shadow-xl shadow-slate-950/20">
+              <LineupViewer />
             </div>
 
             <div className="rounded-3xl border border-slate-700 bg-slate-950/90 p-6 shadow-xl shadow-slate-950/20">
