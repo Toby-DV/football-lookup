@@ -9,7 +9,7 @@ from api_client import extract_match_info, MatchNotFoundError
 from db_models import MatchRecord
 from insights_client import generate_match_insights
 
-from api_client import fetch_match_data
+from api_client import fetch_match_data, fetch_lineup_data, extract_lineup_info
 
 class Match(BaseModel):
     name: str
@@ -76,6 +76,23 @@ def get_match_insights(match_id: int):
             bullets = json.loads(record.insights)
 
     return {"match_id": match_id, "bullets": bullets}
+
+@app.get("/matches/lineups")
+def get_match_lineups(match_id: int):
+    with SessionLocal() as db:
+        try:
+            record = fetch_match_record(db, match_id)
+        except MatchNotFoundError as e:
+            raise HTTPException(status_code=404, detail=f"Get_match_lineups: match not found {e}")
+
+        if record.lineups is None:
+            lineups = extract_lineup_info(fetch_lineup_data(match_id), record.home_team, record.away_team)
+            record.lineups = json.dumps(lineups)
+            db.commit()
+        else:
+            lineups = json.loads(record.lineups)
+
+    return {"match_id": match_id, **lineups}
 
 @app.post("/matches", response_model=Match)
 def create_match(match: Match):

@@ -1,4 +1,10 @@
-from api_client import fetch_match_data, extract_match_info, MatchNotFoundError
+from api_client import (
+    fetch_match_data,
+    extract_match_info,
+    MatchNotFoundError,
+    fetch_lineup_data,
+    extract_lineup_info,
+)
 import pytest
 from unittest.mock import patch, Mock
 
@@ -107,3 +113,77 @@ def test_fetch_match_data_no_key(monkeypatch):
     monkeypatch.delenv("API_FOOTBALL_KEY", raising=False)
     with pytest.raises(ValueError):
         fetch_match_data(123)
+
+
+@pytest.fixture
+def mock_lineups_response():
+    """Provides a fake /fixtures/lineups payload for testing."""
+    return {
+        "response": [
+            {
+                "team": {"id": 33, "name": "Manchester United"},
+                "formation": "4-3-3",
+                "startXI": [
+                    {"player": {"id": 1, "name": "D. de Gea", "number": 1, "pos": "G", "grid": "1:1"}},
+                    {"player": {"id": 2, "name": "H. Maguire", "number": 5, "pos": "D", "grid": "2:2"}},
+                ],
+            },
+            {
+                "team": {"id": 40, "name": "Liverpool"},
+                "formation": "4-3-3",
+                "startXI": [
+                    {"player": {"id": 3, "name": "Alisson", "number": 1, "pos": "G", "grid": "1:1"}},
+                ],
+            },
+        ]
+    }
+
+
+def test_extract_lineup_info(mock_lineups_response):
+    extracted = extract_lineup_info(mock_lineups_response, "Manchester United", "Liverpool")
+    assert extracted == {
+        "home": {
+            "team": "Manchester United",
+            "formation": "4-3-3",
+            "starting_eleven": [
+                {"number": 1, "name": "D. de Gea", "position": "G", "grid": "1:1"},
+                {"number": 5, "name": "H. Maguire", "position": "D", "grid": "2:2"},
+            ],
+        },
+        "away": {
+            "team": "Liverpool",
+            "formation": "4-3-3",
+            "starting_eleven": [
+                {"number": 1, "name": "Alisson", "position": "G", "grid": "1:1"},
+            ],
+        },
+    }
+
+
+def test_extract_lineup_info_no_data():
+    extracted = extract_lineup_info({"response": []}, "Manchester United", "Liverpool")
+    assert extracted == {"home": None, "away": None}
+
+
+def test_fetch_lineup_data(monkeypatch):
+    monkeypatch.setenv("API_FOOTBALL_KEY", "fake_api_key")
+    mock_response = Mock()
+    mock_response.json.return_value = {"response": ["fake data"]}
+    mock_response.raise_for_status.return_value = None
+
+    with patch("api_client.requests.get", return_value=mock_response) as mock_get:
+        result = fetch_lineup_data(591)
+
+    assert result == {"response": ["fake data"]}
+    mock_get.assert_called_once_with(
+        "https://v3.football.api-sports.io/fixtures/lineups",
+        headers={"x-apisports-key": "fake_api_key"},
+        params={"fixture": 591},
+        timeout=10,
+    )
+
+
+def test_fetch_lineup_data_no_key(monkeypatch):
+    monkeypatch.delenv("API_FOOTBALL_KEY", raising=False)
+    with pytest.raises(ValueError):
+        fetch_lineup_data(591)

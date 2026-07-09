@@ -200,3 +200,63 @@ def test_insights_match_not_found(client, monkeypatch):
 
     response = client.get("/matches/insights", params={"match_id": 999})
     assert response.status_code == 404
+
+
+@pytest.fixture
+def raw_lineups_payload():
+    """Raw API-Football /fixtures/lineups payload, as returned by fetch_lineup_data."""
+    return {
+        "response": [
+            {
+                "team": {"id": 33, "name": "Manchester United"},
+                "formation": "4-3-3",
+                "startXI": [
+                    {"player": {"id": 1, "name": "D. de Gea", "number": 1, "pos": "G", "grid": "1:1"}},
+                ],
+            },
+            {
+                "team": {"id": 40, "name": "Liverpool"},
+                "formation": "4-3-3",
+                "startXI": [
+                    {"player": {"id": 3, "name": "Alisson", "number": 1, "pos": "G", "grid": "1:1"}},
+                ],
+            },
+        ]
+    }
+
+
+def test_lineups_generated_and_cached(client, db_session_factory, raw_api_payload, raw_lineups_payload, monkeypatch):
+    monkeypatch.setattr(main, "fetch_match_data", lambda match_id: raw_api_payload)
+    calls = []
+
+    def fake_fetch_lineups(match_id):
+        calls.append(match_id)
+        return raw_lineups_payload
+
+    monkeypatch.setattr(main, "fetch_lineup_data", fake_fetch_lineups)
+
+    first = client.get("/matches/lineups", params={"match_id": 591})
+    assert first.status_code == 200
+    body = first.json()
+    assert body["match_id"] == 591
+    assert body["home"]["team"] == "Manchester United"
+    assert body["home"]["starting_eleven"] == [
+        {"number": 1, "name": "D. de Gea", "position": "G", "grid": "1:1"}
+    ]
+    assert body["away"]["team"] == "Liverpool"
+
+    # Second request is served from the DB without re-fetching
+    second = client.get("/matches/lineups", params={"match_id": 591})
+    assert second.json() == first.json()
+    assert calls == [591]
+
+    with db_session_factory() as db:
+        record = db.get(MatchRecord, 591)
+    assert record.lineups is not None
+
+
+def test_lineups_match_not_found(client, monkeypatch):
+    monkeypatch.setattr(main, "fetch_match_data", lambda match_id: {"response": []})
+
+    response = client.get("/matches/lineups", params={"match_id": 999})
+    assert response.status_code == 404

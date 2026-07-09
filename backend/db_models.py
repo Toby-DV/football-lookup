@@ -14,6 +14,8 @@ class MatchRecord(Base):
     league = Column(String, nullable=True)
     # JSON-encoded list of insight bullet strings; NULL = not generated yet
     insights = Column(Text, nullable=True)
+    # JSON-encoded {"home": {...}, "away": {...}} starting XI lineups; NULL = not fetched yet
+    lineups = Column(Text, nullable=True)
     home_goals = Column(Integer, nullable=False)
     away_goals = Column(Integer, nullable=False)
     home_shots_on_goal = Column(Integer, nullable=False)
