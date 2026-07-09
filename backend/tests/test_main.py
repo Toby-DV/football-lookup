@@ -260,3 +260,22 @@ def test_lineups_match_not_found(client, monkeypatch):
 
     response = client.get("/matches/lineups", params={"match_id": 999})
     assert response.status_code == 404
+
+
+def test_lineups_fetch_failed(client, raw_api_payload, monkeypatch):
+    monkeypatch.setattr(main, "fetch_match_data", lambda match_id: raw_api_payload)
+
+    def fake_fetch_lineups(match_id):
+        raise RuntimeError("API-Football rate limit exceeded")
+
+    monkeypatch.setattr(main, "fetch_lineup_data", fake_fetch_lineups)
+
+    response = client.get("/matches/lineups", params={"match_id": 591})
+    assert response.status_code == 502
+    # A proper HTTPException response still carries CORS headers, unlike an
+    # unhandled exception (which the CORSMiddleware never gets a chance to
+    # touch, making browsers misreport the failure as a CORS error).
+    response_with_origin = client.get(
+        "/matches/lineups", params={"match_id": 591}, headers={"Origin": "http://localhost:3000"}
+    )
+    assert response_with_origin.headers["access-control-allow-origin"] == "http://localhost:3000"
