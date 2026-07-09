@@ -5,52 +5,71 @@ import { useSearchParams } from "next/navigation";
 import axios from "axios";
 import api from "../api";
 
-type LineupPlayer = { number: number; name: string; position: string; x: number; y: number };
-type TeamLineup = { team: string; formation: string; players: LineupPlayer[] };
+type ApiLineupPlayer = { number: number; name: string; position: string; grid: string };
+type TeamLineup = { team: string; formation: string; starting_eleven: ApiLineupPlayer[] };
+type PositionedPlayer = { number: number; name: string; x: number; y: number };
 
-const lineups: TeamLineup[] = [
-  {
-    team: "Red Raptors",
-    formation: "4-3-3",
-    players: [
-      { number: 1, name: "Marsh", position: "GK", x: 50, y: 90 },
-      { number: 2, name: "Alden", position: "LB", x: 15, y: 68 },
-      { number: 4, name: "Cross", position: "CB", x: 38, y: 72 },
-      { number: 5, name: "Wray", position: "CB", x: 62, y: 72 },
-      { number: 3, name: "Feld", position: "RB", x: 85, y: 68 },
-      { number: 8, name: "Doyle", position: "CM", x: 25, y: 45 },
-      { number: 6, name: "Kade", position: "CM", x: 50, y: 40 },
-      { number: 10, name: "Ronan", position: "CM", x: 75, y: 45 },
-      { number: 11, name: "Nova", position: "LW", x: 18, y: 15 },
-      { number: 9, name: "Razor", position: "ST", x: 50, y: 10 },
-      { number: 7, name: "Vance", position: "RW", x: 82, y: 15 },
-    ],
-  },
-  {
-    team: "Blue Titans",
-    formation: "4-3-3",
-    players: [
-      { number: 1, name: "Holt", position: "GK", x: 50, y: 90 },
-      { number: 2, name: "Ghost", position: "LB", x: 15, y: 68 },
-      { number: 5, name: "Brant", position: "CB", x: 38, y: 72 },
-      { number: 4, name: "Silva", position: "CB", x: 62, y: 72 },
-      { number: 3, name: "Kirk", position: "RB", x: 85, y: 68 },
-      { number: 6, name: "Adler", position: "CM", x: 25, y: 45 },
-      { number: 8, name: "Reyes", position: "CM", x: 50, y: 40 },
-      { number: 10, name: "Finch", position: "CM", x: 75, y: 45 },
-      { number: 7, name: "Sable", position: "LW", x: 18, y: 15 },
-      { number: 9, name: "Draven", position: "ST", x: 50, y: 10 },
-      { number: 11, name: "Wilder", position: "RW", x: 82, y: 15 },
-    ],
-  },
-];
+// Converts each player's "row:col" grid slot (row 1 = goalkeeper, increasing
+// rows move upfield) into pitch percentage coordinates: row picks the vertical
+// band, column position within that row spaces players evenly left-to-right.
+function layoutFormation(players: ApiLineupPlayer[]): PositionedPlayer[] {
+  const byRow = new Map<number, { number: number; name: string; col: number }[]>();
+  let maxRow = 1;
+  for (const player of players) {
+    const [rowStr, colStr] = player.grid.split(":");
+    const row = Number(rowStr);
+    maxRow = Math.max(maxRow, row);
+    const rowPlayers = byRow.get(row) ?? [];
+    rowPlayers.push({ number: player.number, name: player.name, col: Number(colStr) });
+    byRow.set(row, rowPlayers);
+  }
 
-const LineupViewer = () => {
+  const positioned: PositionedPlayer[] = [];
+  for (const [row, rowPlayers] of byRow) {
+    const y = maxRow === 1 ? 50 : 90 - ((row - 1) / (maxRow - 1)) * 80;
+    const sorted = [...rowPlayers].sort((a, b) => a.col - b.col);
+    sorted.forEach((player, index) => {
+      const x = ((index + 1) / (sorted.length + 1)) * 100;
+      positioned.push({ number: player.number, name: player.name, x, y });
+    });
+  }
+  return positioned;
+}
+
+export default function Stats() {
+  return (
+    <Suspense fallback={null}>
+      <StatsContent />
+    </Suspense>
+  );
+}
+
+type LineupViewerProps = {
+  loading: boolean;
+  error: string | null;
+  home: TeamLineup | null;
+  away: TeamLineup | null;
+};
+
+const LineupViewer = ({ loading, error, home, away }: LineupViewerProps) => {
+  const teams = [home, away].filter((team): team is TeamLineup => team !== null);
   const [activeTeamIndex, setActiveTeamIndex] = useState(0);
-  const lineup = lineups[activeTeamIndex];
+
+  if (loading) {
+    return <p className="animate-pulse text-sm text-slate-400">Loading lineups…</p>;
+  }
+  if (error) {
+    return <p className="text-sm text-slate-400">{error}</p>;
+  }
+  if (teams.length === 0) {
+    return <p className="text-sm text-slate-400">Lineups not available for this match.</p>;
+  }
+
+  const lineup = teams[activeTeamIndex];
+  const players = layoutFormation(lineup.starting_eleven);
 
   const goToTeam = (direction: -1 | 1) => {
-    setActiveTeamIndex((prev) => (prev + direction + lineups.length) % lineups.length);
+    setActiveTeamIndex((prev) => (prev + direction + teams.length) % teams.length);
   };
 
   return (
@@ -82,7 +101,7 @@ const LineupViewer = () => {
         <div className="absolute left-0 right-0 top-1/2 h-px -translate-y-1/2 bg-emerald-100/20" />
         <div className="absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full border border-emerald-100/20" />
 
-        {lineup.players.map((player) => (
+        {players.map((player) => (
           <div
             key={player.number}
             className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1"
@@ -91,30 +110,13 @@ const LineupViewer = () => {
             <div className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-950/90 text-xs font-semibold text-emerald-300 ring-1 ring-emerald-400/40">
               {player.number}
             </div>
-            <div className="text-center leading-tight">
-              <p className="text-[11px] font-medium text-white">{player.name}</p>
-              <p className="text-[10px] text-slate-300/80">{player.position}</p>
-            </div>
+            <p className="text-center text-[11px] font-medium leading-tight text-white">{player.name}</p>
           </div>
         ))}
       </div>
     </div>
   );
 };
-
-const topPerformers = [
-  { name: "Razor", role: "Carry", team: "Red Raptors", score: "23 KDA" },
-  { name: "Ghost", role: "Support", team: "Blue Titans", score: "18 assists" },
-  { name: "Nova", role: "Jungle", team: "Red Raptors", score: "12 objectives" },
-];
-
-export default function Stats() {
-  return (
-    <Suspense fallback={null}>
-      <StatsContent />
-    </Suspense>
-  );
-}
 
 function StatsContent() {
   type MatchInfo = {
@@ -147,6 +149,27 @@ function StatsContent() {
   const [insights, setInsights] = useState<string[] | null>(null);
   const [insightsLoading, setInsightsLoading] = useState(false);
   const [insightsError, setInsightsError] = useState<string | null>(null);
+  const [homeLineup, setHomeLineup] = useState<TeamLineup | null>(null);
+  const [awayLineup, setAwayLineup] = useState<TeamLineup | null>(null);
+  const [lineupsLoading, setLineupsLoading] = useState(false);
+  const [lineupsError, setLineupsError] = useState<string | null>(null);
+
+  const getLineups = async (match_id: string) => {
+    setHomeLineup(null);
+    setAwayLineup(null);
+    setLineupsError(null);
+    setLineupsLoading(true);
+    try {
+      const response = await api.get("/matches/lineups", { params: { match_id } });
+      setHomeLineup(response.data.home);
+      setAwayLineup(response.data.away);
+    } catch (error) {
+      setLineupsError("Couldn't load lineups for this match.");
+      console.error("Error fetching lineups", error);
+    } finally {
+      setLineupsLoading(false);
+    }
+  };
 
   const getInsights = async (match_id: string) => {
     setInsights(null);
@@ -183,6 +206,7 @@ function StatsContent() {
   useEffect(() => {
     if (matchId) {
       void getMatchInfo(matchId)
+      void getLineups(matchId)
     }
   }, [matchId]);
 
@@ -245,78 +269,7 @@ function StatsContent() {
             </div>
 
             <div className="flex h-100 flex-col rounded-3xl border border-slate-700 bg-slate-950/90 p-6 shadow-xl shadow-slate-950/20">
-              <LineupViewer />
-            </div>
-
-            <div className="rounded-3xl border border-slate-700 bg-slate-950/90 p-6 shadow-xl shadow-slate-950/20">
-              <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Player Spotlight</p>
-              <h2 className="mt-2 text-2xl font-semibold text-white">Top Performers</h2>
-              <div className="mt-6 space-y-4">
-                {topPerformers.map((player) => (
-                  <div key={player.name} className="flex items-center gap-4 rounded-3xl border border-slate-800 bg-slate-900/80 p-4">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-800 text-slate-400">
-                      <span className="text-sm uppercase">IMG</span>
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-white">{player.name}</p>
-                      <p className="text-sm text-slate-400">{player.role} • {player.team}</p>
-                    </div>
-                    <span className="rounded-full bg-slate-800 px-3 py-1 text-xs text-emerald-300">{player.score}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-slate-700 bg-slate-950/90 p-6 shadow-xl shadow-slate-950/20">
-              <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Team Profiles</p>
-              <div className="mt-5 space-y-5">
-                <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-5">
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <p className="font-semibold text-white">Red Raptors</p>
-                      <p className="text-sm text-slate-400">Attack-focused roster with strong map control.</p>
-                    </div>
-                    <span className="rounded-full bg-rose-500/10 px-3 py-1 text-xs text-rose-300">Aggressive</span>
-                  </div>
-                  <div className="mt-4 grid gap-3 text-sm text-slate-400">
-                    <div className="flex items-center justify-between">
-                      <span>Win Rate</span>
-                      <strong className="text-white">78%</strong>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Avg. KDA</span>
-                      <strong className="text-white">4.6</strong>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Objective Control</span>
-                      <strong className="text-white">87%</strong>
-                    </div>
-                  </div>
-                </div>
-                <div className="rounded-3xl border border-slate-800 bg-slate-900/80 p-5">
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <p className="font-semibold text-white">Blue Titans</p>
-                      <p className="text-sm text-slate-400">Defensive lineup built for late-game comebacks.</p>
-                    </div>
-                    <span className="rounded-full bg-sky-500/10 px-3 py-1 text-xs text-sky-300">Defensive</span>
-                  </div>
-                  <div className="mt-4 grid gap-3 text-sm text-slate-400">
-                    <div className="flex items-center justify-between">
-                      <span>Win Rate</span>
-                      <strong className="text-white">64%</strong>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Avg. KDA</span>
-                      <strong className="text-white">3.9</strong>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Defense Success</span>
-                      <strong className="text-white">81%</strong>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <LineupViewer key={matchId} loading={lineupsLoading} error={lineupsError} home={homeLineup} away={awayLineup} />
             </div>
 
             <div className="rounded-3xl border border-slate-700 bg-slate-950/90 p-6 shadow-xl shadow-slate-950/20">

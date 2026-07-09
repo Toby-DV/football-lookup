@@ -9,7 +9,7 @@ from api_client import extract_match_info, MatchNotFoundError
 from db_models import MatchRecord
 from insights_client import generate_match_insights
 
-from api_client import fetch_match_data
+from api_client import fetch_match_data, fetch_lineup_data, extract_lineup_info
 
 class Match(BaseModel):
     name: str
@@ -77,6 +77,26 @@ def get_match_insights(match_id: int):
 
     return {"match_id": match_id, "bullets": bullets}
 
+@app.get("/matches/lineups")
+def get_match_lineups(match_id: int):
+    with SessionLocal() as db:
+        try:
+            record = fetch_match_record(db, match_id)
+        except MatchNotFoundError as e:
+            raise HTTPException(status_code=404, detail=f"Get_match_lineups: match not found {e}")
+
+        if record.lineups is None:
+            try:
+                lineups = extract_lineup_info(fetch_lineup_data(match_id), record.home_team, record.away_team)
+            except Exception as e:
+                raise HTTPException(status_code=502, detail=f"Lineup fetch failed: {e}")
+            record.lineups = json.dumps(lineups)
+            db.commit()
+        else:
+            lineups = json.loads(record.lineups)
+
+    return {"match_id": match_id, **lineups}
+
 @app.post("/matches", response_model=Match)
 def create_match(match: Match):
     memory_db["matches"].append(match)
@@ -92,8 +112,8 @@ def fetch_match_record(db, match_id: int) -> MatchRecord:
             home_team=data["home_team"], away_team=data["away_team"],
             date=data["date"], league=data["league"],
             home_goals=data["goals"]["home"], away_goals=data["goals"]["away"],
-            home_possession=int(data["possession"]["home"]),
-            away_possession=int(data["possession"]["away"]),
+            home_possession=int(data["possession"]["home"]) if data["possession"]["home"] is not None else None,
+            away_possession=int(data["possession"]["away"]) if data["possession"]["away"] is not None else None,
             home_shots_on_goal=data["shots_on_goal"]["home"],
             away_shots_on_goal=data["shots_on_goal"]["away"],
             home_shots_total=data["shots_total"]["home"],
