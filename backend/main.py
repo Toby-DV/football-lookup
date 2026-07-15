@@ -8,6 +8,7 @@ from database import SessionLocal, Base, engine
 from api_client import extract_match_info, MatchNotFoundError
 from db_models import MatchRecord
 from insights_client import generate_match_insights
+from sqlalchemy.exc import IntegrityError
 
 from api_client import fetch_match_data, fetch_lineup_data, extract_lineup_info
 
@@ -120,7 +121,11 @@ def fetch_match_record(db, match_id: int) -> MatchRecord:
             away_shots_total=data["shots_total"]["away"],
         )
         db.add(record)
-        db.commit()
+        try:
+            db.commit()
+        except IntegrityError:
+            db.rollback()
+            record = db.get(MatchRecord, match_id)
     return record
 
 def match_record_to_dict(record: MatchRecord) -> dict:
