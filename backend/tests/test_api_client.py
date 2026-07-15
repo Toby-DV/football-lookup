@@ -4,6 +4,8 @@ from api_client import (
     MatchNotFoundError,
     fetch_lineup_data,
     extract_lineup_info,
+    fetch_player_ratings,
+    extract_top_performers,
 )
 import pytest
 from unittest.mock import patch, Mock
@@ -189,3 +191,74 @@ def test_fetch_lineup_data_no_key(monkeypatch):
     monkeypatch.delenv("API_FOOTBALL_KEY", raising=False)
     with pytest.raises(ValueError):
         fetch_lineup_data(591)
+
+
+@pytest.fixture
+def mock_player_ratings_response():
+    """Provides a fake /fixtures/players payload for testing."""
+    return {
+        "response": [
+            {
+                "team": {"id": 33, "name": "Manchester United"},
+                "players": [
+                    {
+                        "player": {"id": 1, "name": "D. de Gea", "photo": "https://media.api-sports.io/football/players/1.png"},
+                        "statistics": [{"games": {"rating": "6.8"}}],
+                    },
+                    {
+                        "player": {"id": 2, "name": "H. Maguire", "photo": "https://media.api-sports.io/football/players/2.png"},
+                        "statistics": [{"games": {"rating": "7.5"}}],
+                    },
+                    {
+                        "player": {"id": 3, "name": "Sub not used", "photo": "https://media.api-sports.io/football/players/3.png"},
+                        "statistics": [{"games": {"rating": None}}],
+                    },
+                ],
+            },
+            {
+                "team": {"id": 40, "name": "Liverpool"},
+                "players": [
+                    {
+                        "player": {"id": 4, "name": "Alisson", "photo": "https://media.api-sports.io/football/players/4.png"},
+                        "statistics": [{"games": {"rating": "8.1"}}],
+                    },
+                ],
+            },
+        ]
+    }
+
+
+def test_extract_top_performers(mock_player_ratings_response):
+    top = extract_top_performers(mock_player_ratings_response, top_n=2)
+    assert top == [
+        {"name": "Alisson", "photo": "https://media.api-sports.io/football/players/4.png", "rating": 8.1},
+        {"name": "H. Maguire", "photo": "https://media.api-sports.io/football/players/2.png", "rating": 7.5},
+    ]
+
+
+def test_extract_top_performers_no_data():
+    assert extract_top_performers({"response": []}) == []
+
+
+def test_fetch_player_ratings(monkeypatch):
+    monkeypatch.setenv("API_FOOTBALL_KEY", "fake_api_key")
+    mock_response = Mock()
+    mock_response.json.return_value = {"response": ["fake data"]}
+    mock_response.raise_for_status.return_value = None
+
+    with patch("api_client.requests.get", return_value=mock_response) as mock_get:
+        result = fetch_player_ratings(591)
+
+    assert result == {"response": ["fake data"]}
+    mock_get.assert_called_once_with(
+        "https://v3.football.api-sports.io/fixtures/players",
+        headers={"x-apisports-key": "fake_api_key"},
+        params={"fixture": 591},
+        timeout=10,
+    )
+
+
+def test_fetch_player_ratings_no_key(monkeypatch):
+    monkeypatch.delenv("API_FOOTBALL_KEY", raising=False)
+    with pytest.raises(ValueError):
+        fetch_player_ratings(591)

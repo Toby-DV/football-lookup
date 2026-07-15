@@ -36,6 +36,15 @@ function layoutFormation(players: ApiLineupPlayer[]): PositionedPlayer[] {
   return positioned;
 }
 
+// Converts an API-Football ISO date string (e.g. "2024-04-07T15:30:00+00:00") to dd/mm/yy.
+function formatMatchDate(iso: string): string {
+  const date = new Date(iso);
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = String(date.getFullYear()).slice(-2);
+  return `${day}/${month}/${year}`;
+}
+
 export default function Stats() {
   return (
     <Suspense fallback={null}>
@@ -118,6 +127,8 @@ const LineupViewer = ({ loading, error, home, away }: LineupViewerProps) => {
   );
 };
 
+type TopPerformer = { name: string; rating: number | null; photo: string | null };
+
 function StatsContent() {
   type MatchInfo = {
     id: number;
@@ -126,6 +137,8 @@ function StatsContent() {
     away_team: string;
     home_logo: string | null;
     away_logo: string | null;
+    date: string | null;
+    league: string | null;
     goals: {
       home: number | null;
       away: number | null;
@@ -155,6 +168,24 @@ function StatsContent() {
   const [awayLineup, setAwayLineup] = useState<TeamLineup | null>(null);
   const [lineupsLoading, setLineupsLoading] = useState(false);
   const [lineupsError, setLineupsError] = useState<string | null>(null);
+  const [topPerformers, setTopPerformers] = useState<TopPerformer[]>([]);
+  const [topPerformersLoading, setTopPerformersLoading] = useState(false);
+  const [topPerformersError, setTopPerformersError] = useState<string | null>(null);
+
+  const getTopPerformers = async (match_id: string) => {
+    setTopPerformers([]);
+    setTopPerformersError(null);
+    setTopPerformersLoading(true);
+    try {
+      const response = await api.get("/matches/top-performers", { params: { match_id } });
+      setTopPerformers(response.data.players);
+    } catch (error) {
+      setTopPerformersError("Couldn't load top performers for this match.");
+      console.error("Error fetching top performers", error);
+    } finally {
+      setTopPerformersLoading(false);
+    }
+  };
 
   const getLineups = async (match_id: string) => {
     setHomeLineup(null);
@@ -209,6 +240,7 @@ function StatsContent() {
     if (matchId) {
       void getMatchInfo(matchId)
       void getLineups(matchId)
+      void getTopPerformers(matchId)
     }
   }, [matchId]);
 
@@ -216,13 +248,18 @@ function StatsContent() {
     <div className="min-h-screen bg-[#071014] text-slate-100">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <header className="mb-8 flex flex-col gap-4 rounded-3xl border border-slate-700 bg-slate-950/80 p-6 shadow-[0_0_60px_rgba(15,23,42,0.45)] backdrop-blur-xl">
-          <h1 className="text-center text-3xl font-semibold tracking-wide text-white">
-            {matchError
-              ? matchError
-              : matchInfo
-              ? matchInfo["home_team"] + " vs " + matchInfo["away_team"]
-              : "Loading..."}
-          </h1>
+          <div className="relative flex items-center justify-center">
+            <h1 className="text-center text-3xl font-semibold tracking-wide text-white">
+              {matchError
+                ? matchError
+                : matchInfo
+                ? matchInfo["home_team"] + " vs " + matchInfo["away_team"]
+                : "Loading..."}
+            </h1>
+            {matchInfo?.date && (
+              <span className="absolute right-0 text-lg font-normal text-slate-400">{formatMatchDate(matchInfo.date)}</span>
+            )}
+          </div>
         </header>
 
         <main className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
@@ -277,24 +314,57 @@ function StatsContent() {
               <LineupViewer key={matchId} loading={lineupsLoading} error={lineupsError} home={homeLineup} away={awayLineup} />
             </div>
 
-            <div className="rounded-3xl border border-slate-700 bg-slate-950/90 p-6 shadow-xl shadow-slate-950/20">
-              <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Event Details</p>
-              <div className="mt-5 space-y-4 text-sm text-slate-300">
-                <div className="flex items-center justify-between">
-                  <span>Event</span>
-                  <strong>Midnight Showdown</strong>
+            <div className="flex flex-col gap-6">
+              <div className="rounded-3xl border border-slate-700 bg-slate-950/90 p-6 shadow-xl shadow-slate-950/20">
+                <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Event Details</p>
+                <div className="mt-5 space-y-4 text-sm text-slate-300">
+                  <div className="flex items-center justify-between">
+                    <span>Event</span>
+                    <strong>Midnight Showdown</strong>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Date</span>
+                    <strong>July 3, 2026</strong>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>League</span>
+                    <strong>{matchInfo?.league ?? "—"}</strong>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Venue</span>
+                    <strong>{matchInfo?.venue_name ?? "—"}</strong>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span>Date</span>
-                  <strong>July 3, 2026</strong>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>League</span>
-                  <strong>Pro Circuit</strong>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Venue</span>
-                  <strong>Neo Dome</strong>
+              </div>
+
+              <div className="rounded-3xl border border-slate-700 bg-slate-950/90 p-6 shadow-xl shadow-slate-950/20">
+                <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Top Performers</p>
+                <div className="mt-5 flex gap-3">
+                  {topPerformersLoading ? (
+                    <p className="animate-pulse text-sm text-slate-400">Loading top performers…</p>
+                  ) : topPerformersError ? (
+                    <p className="text-sm text-slate-400">{topPerformersError}</p>
+                  ) : topPerformers.length > 0 ? (
+                    topPerformers.map((player, index) => (
+                      <div
+                        key={index}
+                        className="flex min-w-0 flex-1 flex-col items-center gap-2 rounded-2xl border border-slate-800 bg-slate-900/85 px-3 py-4 text-center"
+                      >
+                        {player.photo ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={player.photo} alt={player.name} className="h-12 w-12 rounded-full object-cover" />
+                        ) : (
+                          <div className="h-12 w-12 rounded-full bg-slate-800" />
+                        )}
+                        <p className="w-full truncate text-[11px] font-medium leading-tight text-white">{player.name}</p>
+                        <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-300">
+                          {player.rating !== null ? player.rating.toFixed(1) : "—"}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-slate-400">No player ratings available for this match.</p>
+                  )}
                 </div>
               </div>
             </div>

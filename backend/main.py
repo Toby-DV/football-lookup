@@ -10,7 +10,13 @@ from db_models import MatchRecord
 from insights_client import generate_match_insights
 from sqlalchemy.exc import IntegrityError
 
-from api_client import fetch_match_data, fetch_lineup_data, extract_lineup_info
+from api_client import (
+    fetch_match_data,
+    fetch_lineup_data,
+    extract_lineup_info,
+    extract_top_performers,
+    fetch_player_ratings,
+)
 
 class Match(BaseModel):
     name: str
@@ -97,6 +103,26 @@ def get_match_lineups(match_id: int):
             lineups = json.loads(record.lineups)
 
     return {"match_id": match_id, **lineups}
+
+@app.get("/matches/top-performers")
+def get_top_performers(match_id: int):
+    with SessionLocal() as db:
+        try:
+            record = fetch_match_record(db, match_id)
+        except MatchNotFoundError as e:
+            raise HTTPException(status_code=404, detail=f"Get_top_performers: match not found {e}")
+
+        if record.top_performers is None:
+            try:
+                players = extract_top_performers(fetch_player_ratings(match_id))
+            except Exception as e:
+                raise HTTPException(status_code=502, detail=f"Top performers fetch failed: {e}")
+            record.top_performers = json.dumps(players)
+            db.commit()
+        else:
+            players = json.loads(record.top_performers)
+
+    return {"match_id": match_id, "players": players}
 
 @app.post("/matches", response_model=Match)
 def create_match(match: Match):

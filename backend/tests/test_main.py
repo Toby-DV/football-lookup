@@ -282,3 +282,79 @@ def test_lineups_fetch_failed(client, raw_api_payload, monkeypatch):
         "/matches/lineups", params={"match_id": 591}, headers={"Origin": "http://localhost:3000"}
     )
     assert response_with_origin.headers["access-control-allow-origin"] == "http://localhost:3000"
+
+
+@pytest.fixture
+def raw_player_ratings_payload():
+    """Raw API-Football /fixtures/players payload, as returned by fetch_player_ratings."""
+    return {
+        "response": [
+            {
+                "team": {"id": 33, "name": "Manchester United"},
+                "players": [
+                    {
+                        "player": {"id": 1, "name": "D. de Gea", "photo": "https://media.api-sports.io/football/players/1.png"},
+                        "statistics": [{"games": {"rating": "6.8"}}],
+                    },
+                ],
+            },
+            {
+                "team": {"id": 40, "name": "Liverpool"},
+                "players": [
+                    {
+                        "player": {"id": 4, "name": "Alisson", "photo": "https://media.api-sports.io/football/players/4.png"},
+                        "statistics": [{"games": {"rating": "8.1"}}],
+                    },
+                ],
+            },
+        ]
+    }
+
+
+def test_top_performers_generated_and_cached(client, db_session_factory, raw_api_payload, raw_player_ratings_payload, monkeypatch):
+    monkeypatch.setattr(main, "fetch_match_data", lambda match_id: raw_api_payload)
+    calls = []
+
+    def fake_fetch_ratings(match_id):
+        calls.append(match_id)
+        return raw_player_ratings_payload
+
+    monkeypatch.setattr(main, "fetch_player_ratings", fake_fetch_ratings)
+
+    first = client.get("/matches/top-performers", params={"match_id": 591})
+    assert first.status_code == 200
+    body = first.json()
+    assert body["match_id"] == 591
+    assert body["players"][0] == {
+        "name": "Alisson",
+        "photo": "https://media.api-sports.io/football/players/4.png",
+        "rating": 8.1,
+    }
+
+    # Second request is served from the DB without re-fetching
+    second = client.get("/matches/top-performers", params={"match_id": 591})
+    assert second.json() == first.json()
+    assert calls == [591]
+
+    with db_session_factory() as db:
+        record = db.get(MatchRecord, 591)
+    assert record.top_performers is not None
+
+
+def test_top_performers_match_not_found(client, monkeypatch):
+    monkeypatch.setattr(main, "fetch_match_data", lambda match_id: {"response": []})
+
+    response = client.get("/matches/top-performers", params={"match_id": 999})
+    assert response.status_code == 404
+
+
+def test_top_performers_fetch_failed(client, raw_api_payload, monkeypatch):
+    monkeypatch.setattr(main, "fetch_match_data", lambda match_id: raw_api_payload)
+
+    def fake_fetch_ratings(match_id):
+        raise RuntimeError("API-Football rate limit exceeded")
+
+    monkeypatch.setattr(main, "fetch_player_ratings", fake_fetch_ratings)
+
+    response = client.get("/matches/top-performers", params={"match_id": 591})
+    assert response.status_code == 502

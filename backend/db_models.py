@@ -18,6 +18,8 @@ class MatchRecord(Base):
     insights = Column(Text, nullable=True)
     # JSON-encoded {"home": {...}, "away": {...}} starting XI lineups; NULL = not fetched yet
     lineups = Column(Text, nullable=True)
+    # JSON-encoded list of top-rated player dicts; NULL = not fetched yet
+    top_performers = Column(Text, nullable=True)
     home_goals = Column(Integer, nullable=False)
     away_goals = Column(Integer, nullable=False)
     home_shots_on_goal = Column(Integer, nullable=True)

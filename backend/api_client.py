@@ -49,6 +49,26 @@ def fetch_lineup_data(match_id: int) -> Dict[str, Any]:
     response.raise_for_status()
     return response.json()
 
+def fetch_player_ratings(match_id: int) -> Dict[str, Any]:
+    """Fetch per-player match statistics (including ratings) from API-Football for a specific fixture."""
+    api_key = os.getenv("API_FOOTBALL_KEY")
+    if not api_key:
+        raise ValueError("API_FOOTBALL_KEY environment variable is not set")
+
+    # do not add any more headers or api-football will not respond
+    headers = {
+        "x-apisports-key": api_key,
+    }
+    response = requests.get(
+        f"{API_FOOTBALL_BASE_URL}/fixtures/players",
+        headers=headers,
+        params={"fixture": match_id},
+        timeout=10,
+    )
+
+    response.raise_for_status()
+    return response.json()
+
 def _get_team_stats(statistics, team_id):
     '''Find one team's statistics list within the fixture's "statistics" block, by team id.'''
     for team_block in statistics:
@@ -149,6 +169,28 @@ def extract_lineup_info(data, home_team, away_team):
         elif name == away_team:
             away = _shape_team_lineup(team_block)
     return {"home": home, "away": away}
+
+def _iter_rated_players(data):
+    '''Yield {name, photo, rating} for every player with a numeric rating across both teams.'''
+    for team_block in data.get("response") or []:
+        for player_block in team_block.get("players") or []:
+            player = player_block["player"]
+            statistics = player_block.get("statistics") or []
+            games = statistics[0].get("games") if statistics else None
+            rating = (games or {}).get("rating")
+            if rating is None:
+                continue
+            yield {
+                "name": player["name"],
+                "photo": player.get("photo"),
+                "rating": float(rating),
+            }
+
+def extract_top_performers(data, top_n=5):
+    '''Return the top_n highest-rated players (across both teams) from the raw /fixtures/players response.'''
+    players = list(_iter_rated_players(data))
+    players.sort(key=lambda p: p["rating"], reverse=True)
+    return players[:top_n]
 
 if __name__ == "__main__":
     pass
