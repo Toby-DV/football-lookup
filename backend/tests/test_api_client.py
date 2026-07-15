@@ -21,8 +21,8 @@ def mock_api_response():
                 },
                 "league": {"name": "Premier League"},
                 "teams": {
-                    "home": {"id": 33, "name": "Manchester United"},
-                    "away": {"id": 40, "name": "Liverpool"}
+                    "home": {"id": 33, "name": "Manchester United", "logo": "https://media.api-sports.io/football/teams/33.png"},
+                    "away": {"id": 40, "name": "Liverpool", "logo": "https://media.api-sports.io/football/teams/40.png"}
                 },
                 "score": {
                     "fulltime": {"home": 3, "away": 1}
@@ -55,6 +55,8 @@ def test_extract_match_info(mock_api_response):
         "venue_name": "Old Trafford",
         "home_team": "Manchester United",
         "away_team": "Liverpool",
+        "home_logo": "https://media.api-sports.io/football/teams/33.png",
+        "away_logo": "https://media.api-sports.io/football/teams/40.png",
         "id": 591,
         "date": "2024-04-07T15:30:00+00:00",
         "league": "Premier League",

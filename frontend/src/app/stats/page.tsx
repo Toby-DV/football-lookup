@@ -124,6 +124,8 @@ function StatsContent() {
     venue_name: string;
     home_team: string;
     away_team: string;
+    home_logo: string | null;
+    away_logo: string | null;
     goals: {
       home: number | null;
       away: number | null;
@@ -214,26 +216,29 @@ function StatsContent() {
     <div className="min-h-screen bg-[#071014] text-slate-100">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <header className="mb-8 flex flex-col gap-4 rounded-3xl border border-slate-700 bg-slate-950/80 p-6 shadow-[0_0_60px_rgba(15,23,42,0.45)] backdrop-blur-xl">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-3xl font-semibold tracking-wide text-white">
-                {matchError
-                  ? matchError
-                  : matchInfo
-                  ? matchInfo["home_team"] + " vs " + matchInfo["away_team"]
-                  : "Loading..."}
-              </h1>
-            </div>
-            <div className="flex flex-col items-start gap-2 sm:items-end">
-              <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-300">Match ID: {matchId ?? "—"}</span>
-            </div>
-          </div>
+          <h1 className="text-center text-3xl font-semibold tracking-wide text-white">
+            {matchError
+              ? matchError
+              : matchInfo
+              ? matchInfo["home_team"] + " vs " + matchInfo["away_team"]
+              : "Loading..."}
+          </h1>
         </header>
 
         <main className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
             <div className="rounded-3xl border border-slate-700 bg-slate-950/90 p-6 shadow-xl shadow-slate-950/20">
               <div className="rounded-3xl border border-slate-700 bg-slate-900/90 p-5">
-                <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Game Stats</p>
+                <div className="flex items-center justify-center gap-4">
+                  {matchInfo?.home_logo && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={matchInfo.home_logo} alt={matchInfo.home_team} className="h-8 w-8 object-contain" />
+                  )}
+                  <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Game Stats</p>
+                  {matchInfo?.away_logo && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={matchInfo.away_logo} alt={matchInfo.away_team} className="h-8 w-8 object-contain" />
+                  )}
+                </div>
                 <div className="mt-5 space-y-5 text-white">
                   <div className="rounded-3xl bg-slate-950/80 px-4 py-4">
                     <p className="text-sm text-slate-400">Scoreline</p>

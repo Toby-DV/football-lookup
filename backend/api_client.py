@@ -80,6 +80,8 @@ def extract_match_info(data):
     venue_name = match_data["fixture"]["venue"]["name"]
     home_team = match_data["teams"]["home"]["name"]
     away_team = match_data["teams"]["away"]["name"]
+    home_logo = match_data["teams"]["home"].get("logo")
+    away_logo = match_data["teams"]["away"].get("logo")
     goals = match_data["score"]["fulltime"]
     id = match_data["fixture"]["id"]
     date = match_data["fixture"].get("date")
@@ -104,6 +106,8 @@ def extract_match_info(data):
         "venue_name": venue_name,
         "home_team": home_team,
         "away_team": away_team,
+        "home_logo": home_logo,
+        "away_logo": away_logo,
         "date": date,
         "league": league,
         "goals": goals,

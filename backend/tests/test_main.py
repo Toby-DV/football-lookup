@@ -22,8 +22,8 @@ def raw_api_payload():
                 },
                 "league": {"name": "Premier League"},
                 "teams": {
-                    "home": {"id": 33, "name": "Manchester United"},
-                    "away": {"id": 40, "name": "Liverpool"}
+                    "home": {"id": 33, "name": "Manchester United", "logo": "https://media.api-sports.io/football/teams/33.png"},
+                    "away": {"id": 40, "name": "Liverpool", "logo": "https://media.api-sports.io/football/teams/40.png"}
                 },
                 "score": {
                     "fulltime": {"home": 3, "away": 1}
@@ -112,6 +112,8 @@ def test_external_match_fetched_and_cached(client, db_session_factory, raw_api_p
     assert data["venue_name"] == "Old Trafford"
     assert data["home_team"] == "Manchester United"
     assert data["away_team"] == "Liverpool"
+    assert data["home_logo"] == "https://media.api-sports.io/football/teams/33.png"
+    assert data["away_logo"] == "https://media.api-sports.io/football/teams/40.png"
     assert data["date"] == "2024-04-07T15:30:00+00:00"
     assert data["league"] == "Premier League"
     assert data["goals"] == {"home": 3, "away": 1}
@@ -121,6 +123,7 @@ def test_external_match_fetched_and_cached(client, db_session_factory, raw_api_p
         record = db.get(MatchRecord, 591)
     assert record is not None
     assert record.home_team == "Manchester United"
+    assert record.home_logo == "https://media.api-sports.io/football/teams/33.png"
     assert record.home_possession == 60
 
 

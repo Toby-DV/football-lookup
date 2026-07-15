@@ -111,6 +111,7 @@ def fetch_match_record(db, match_id: int) -> MatchRecord:
         record = MatchRecord(
             id=data["id"], venue_name=data["venue_name"],
             home_team=data["home_team"], away_team=data["away_team"],
+            home_logo=data["home_logo"], away_logo=data["away_logo"],
             date=data["date"], league=data["league"],
             home_goals=data["goals"]["home"], away_goals=data["goals"]["away"],
             home_possession=int(data["possession"]["home"]) if data["possession"]["home"] is not None else None,
@@ -134,6 +135,8 @@ def match_record_to_dict(record: MatchRecord) -> dict:
         "venue_name": record.venue_name,
         "home_team": record.home_team,
         "away_team": record.away_team,
+        "home_logo": record.home_logo,
+        "away_logo": record.away_logo,
         "date": record.date,
         "league": record.league,
         "goals": {"home": record.home_goals, "away": record.away_goals},

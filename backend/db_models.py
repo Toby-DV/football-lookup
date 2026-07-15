@@ -10,6 +10,8 @@ class MatchRecord(Base):
     venue_name = Column(String, nullable=True)
     home_team = Column(String, nullable=False)
     away_team = Column(String, nullable=False)
+    home_logo = Column(String, nullable=True)
+    away_logo = Column(String, nullable=True)
     date = Column(String, nullable=True)
     league = Column(String, nullable=True)
     # JSON-encoded list of insight bullet strings; NULL = not generated yet
