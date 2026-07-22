@@ -69,6 +69,42 @@ def fetch_player_ratings(match_id: int) -> Dict[str, Any]:
     response.raise_for_status()
     return response.json()
 
+def fetch_team_name(team_name):
+    api_key = os.getenv("API_FOOTBALL_KEY")
+    if not api_key:
+        raise ValueError("API_FOOTBALL_KEY environment variable is not set")
+    
+    headers = {
+        "x-apisports-key": api_key,
+    }
+    response = requests.get(
+        f"{API_FOOTBALL_BASE_URL}/teams",
+        headers=headers,
+        params={"search": team_name},
+        timeout=10
+    )
+
+    response.raise_for_status()
+    return response.json()
+
+def fetch_match_by_teams(id_1, id_2, season): # season=2023 searches the 2023/2024 season
+    api_key = os.getenv("API_FOOTBALL_KEY")
+    if not api_key:
+        raise ValueError("API_FOOTBALL_KEY environment variable not set")
+
+    headers = {
+        "x-apisports-key": api_key
+    }
+    response = requests.get(
+        f"{API_FOOTBALL_BASE_URL}/fixtures",
+        headers=headers,
+        params={"h2h": f"{id_1}-{id_2}", "season": season},
+        timeout=10
+    )
+
+    response.raise_for_status()
+    return response.json()
+
 def _get_team_stats(statistics, team_id):
     '''Find one team's statistics list within the fixture's "statistics" block, by team id.'''
     for team_block in statistics:
