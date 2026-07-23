@@ -60,7 +60,10 @@ def get_external_match(match_id: int):
             record = fetch_match_record(db, match_id)
         except MatchNotFoundError as e:
             raise HTTPException(status_code=404, detail=f"Get_external_match: match not found {e}")
-        data = match_record_to_dict(record)
+        try:
+            data = match_record_to_dict(record)
+        except Exception as e:
+            raise HTTPException(status_code=502, detail=f"Get_external_match: Match fetch failed {e}")
 
     return data
 
