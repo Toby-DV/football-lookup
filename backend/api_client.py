@@ -9,6 +9,9 @@ load_dotenv()
 class MatchNotFoundError(Exception):
     '''Raised when api-football does not return a match'''
 
+class TeamNotFoundError(Exception):
+    '''Raised when api-football does not return a team'''
+
 def fetch_match_data(match_id: int) -> Dict[str, Any]:
     """Fetch match data from API-Football for a specific match ID."""
     api_key = os.getenv("API_FOOTBALL_KEY")
@@ -69,7 +72,7 @@ def fetch_player_ratings(match_id: int) -> Dict[str, Any]:
     response.raise_for_status()
     return response.json()
 
-def fetch_team_name(team_name):
+def fetch_team_id(team_name):
     api_key = os.getenv("API_FOOTBALL_KEY")
     if not api_key:
         raise ValueError("API_FOOTBALL_KEY environment variable is not set")
@@ -83,9 +86,14 @@ def fetch_team_name(team_name):
         params={"search": team_name},
         timeout=10
     )
-
     response.raise_for_status()
-    return response.json()
+
+    try:
+        id = response.json()['response'][0]['team']['id']
+    except IndexError:
+        raise TeamNotFoundError(team_name)
+
+    return id
 
 def fetch_match_by_teams(id_1, id_2, season): # season=2023 searches the 2023/2024 season
     api_key = os.getenv("API_FOOTBALL_KEY")
@@ -96,14 +104,16 @@ def fetch_match_by_teams(id_1, id_2, season): # season=2023 searches the 2023/20
         "x-apisports-key": api_key
     }
     response = requests.get(
-        f"{API_FOOTBALL_BASE_URL}/fixtures",
+        f"{API_FOOTBALL_BASE_URL}/fixtures/headtohead",
         headers=headers,
         params={"h2h": f"{id_1}-{id_2}", "season": season},
         timeout=10
     )
 
     response.raise_for_status()
+
     return response.json()
+
 
 def _get_team_stats(statistics, team_id):
     '''Find one team's statistics list within the fixture's "statistics" block, by team id.'''
@@ -126,6 +136,21 @@ def _get_stat_value(team_statistics, stat_type):
         if stat["type"] == stat_type:
             return stat["value"]
     return None
+
+def extract_match_info_summary(data):
+    '''Extract minimal match information from a list of fixtures/headtohead API response. Returns a list of dicts.'''
+    if not data["response"]:
+        raise MatchNotFoundError(data.get("errors"))
+
+    summaries = []
+    for match in data["response"]:
+        current = {}
+        current["id"] = match["fixture"]["id"]
+        current["venue_name"] = match["fixture"]["venue"]["name"]
+        current["league"] = (match.get("league") or {}).get("name")
+        summaries.append(current)
+
+    return summaries
 
 def extract_match_info(data):
     '''Extract relevant match information from the raw API response.'''

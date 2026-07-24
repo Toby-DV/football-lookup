@@ -5,7 +5,7 @@ from typing import List
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from database import SessionLocal, Base, engine
-from api_client import extract_match_info, MatchNotFoundError
+from api_client import extract_match_info, fetch_team_id, fetch_match_by_teams, MatchNotFoundError
 from db_models import MatchRecord
 from insights_client import generate_match_insights
 from sqlalchemy.exc import IntegrityError
@@ -107,6 +107,17 @@ def get_match_lineups(match_id: int):
 
     return {"match_id": match_id, **lineups}
 
+@app.get("/matches/search")
+def get_external_match_search(team_1: str, team_2: str, season: int):
+    try:
+        t1_id = fetch_team_id(team_1)
+        t2_id = fetch_team_id(team_2)
+        data = fetch_match_by_teams(t1_id, t2_id, season)['response']
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=f"Get_external_match_search: error finding match {e}")
+
+    return data
+
 @app.get("/matches/top-performers")
 def get_top_performers(match_id: int):
     with SessionLocal() as db:
@@ -175,5 +186,4 @@ def match_record_to_dict(record: MatchRecord) -> dict:
     }
 
 if __name__ == "__main__":
-    # print(get_external_match(124))
     pass
