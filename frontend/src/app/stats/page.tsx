@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 import api from "../api";
 
@@ -157,6 +157,7 @@ function StatsContent() {
     }
   }
 
+  const router = useRouter();
   const searchParams = useSearchParams();
   const matchId = searchParams.get("match_id");
   const [matchInfo, setMatchInfo] = useState<MatchInfo | null>(null)
@@ -249,6 +250,13 @@ function StatsContent() {
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <header className="mb-8 flex flex-col gap-4 rounded-3xl border border-slate-700 bg-slate-950/80 p-6 shadow-[0_0_60px_rgba(15,23,42,0.45)] backdrop-blur-xl">
           <div className="relative flex items-center justify-center">
+            <button
+              type="button"
+              onClick={() => router.push("/")}
+              className="absolute left-0 text-sm text-slate-400 underline-offset-4 hover:text-emerald-300 hover:underline"
+            >
+              ‹ Back to search
+            </button>
             <h1 className="text-center text-3xl font-semibold tracking-wide text-white">
               {matchError
                 ? matchError
