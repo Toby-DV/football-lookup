@@ -111,7 +111,6 @@ def fetch_match_by_teams(id_1, id_2, season): # season=2023 searches the 2023/20
     )
 
     response.raise_for_status()
-
     return response.json()
 
 
