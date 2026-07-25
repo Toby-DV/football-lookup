@@ -49,7 +49,7 @@ export default function Home() {
     <div className="flex min-h-screen flex-1 items-center justify-center bg-[#071014] px-4 py-8 text-slate-100 sm:px-6 lg:px-8">
       <div className="w-full max-w-2xl rounded-3xl border border-slate-700 bg-slate-950/80 p-10 text-center shadow-[0_0_60px_rgba(15,23,42,0.45)] backdrop-blur-xl">
         <p className="text-xs uppercase tracking-[0.35em] text-emerald-400/80">SYSTEM ARCHIVE</p>
-        <h1 className="mt-3 text-4xl font-semibold tracking-wide text-white">Esports Match Lookup</h1>
+        <h1 className="mt-3 text-4xl font-semibold tracking-wide text-white">Football Match Lookup</h1>
         <p className="mx-auto mt-4 max-w-md text-sm text-slate-400">
           Search for a match by team names and year to pull its scoreline, venue, and team profiles from the archive.
         </p>
