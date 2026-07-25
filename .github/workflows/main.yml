@@ -65,3 +65,12 @@ jobs:
         run: |
             python -c "from database import Base, engine; import db_models; Base.metadata.create_all(engine)"
             python -m pytest tests/
+  
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build backend image
+        run: docker build -t backend-test ./backend
+      - name: Build frontend image
+        run: docker build -t frontend-test ./frontend
