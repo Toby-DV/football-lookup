@@ -1,6 +1,6 @@
 import json
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, APIRouter
 from typing import List
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
@@ -35,7 +35,7 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(lifespan=lifespan)
-memory_db = {"matches": []}
+router = APIRouter(prefix="/api/backend")
 
 app.add_middleware(
     CORSMiddleware,
@@ -45,15 +45,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/")
+@router.get("/")
 def read_root():
     return {"message": "api is running"}
 
-@app.get("/matches", response_model=MatchList)
-def get_matches():
-    return MatchList(matches=memory_db["matches"])
-
-@app.get("/matches/external")
+@router.get("/matches/external")
 def get_external_match(match_id: int):
     with SessionLocal() as db:
         try:
@@ -67,7 +63,7 @@ def get_external_match(match_id: int):
 
     return data
 
-@app.get("/matches/insights")
+@router.get("/matches/insights")
 def get_match_insights(match_id: int):
     with SessionLocal() as db:
         try:
@@ -87,7 +83,7 @@ def get_match_insights(match_id: int):
 
     return {"match_id": match_id, "bullets": bullets}
 
-@app.get("/matches/lineups")
+@router.get("/matches/lineups")
 def get_match_lineups(match_id: int):
     with SessionLocal() as db:
         try:
@@ -107,7 +103,7 @@ def get_match_lineups(match_id: int):
 
     return {"match_id": match_id, **lineups}
 
-@app.get("/matches/search")
+@router.get("/matches/search")
 def get_external_match_search(team_1: str, team_2: str, season: int):
     try:
         t1_id = fetch_team_id(team_1)
@@ -118,7 +114,7 @@ def get_external_match_search(team_1: str, team_2: str, season: int):
 
     return data
 
-@app.get("/matches/top-performers")
+@router.get("/matches/top-performers")
 def get_top_performers(match_id: int):
     with SessionLocal() as db:
         try:
@@ -138,10 +134,7 @@ def get_top_performers(match_id: int):
 
     return {"match_id": match_id, "players": players}
 
-@app.post("/matches", response_model=Match)
-def create_match(match: Match):
-    memory_db["matches"].append(match)
-    return match
+app.include_router(router)
 
 def fetch_match_record(db, match_id: int) -> MatchRecord:
     """Return the cached MatchRecord, fetching from API-Football / caching on a cache miss."""
