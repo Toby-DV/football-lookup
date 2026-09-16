@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 load_dotenv()
 
 DATABASE_URL = os.getenv(
-    "DATABASE_URL", "postgresql+psycopg://demo:demo@localhost:5432/demo"
+    "DATABASE_URL", "postgresql://demo:demo@localhost:5432/demo"
 )
 
 engine = create_engine(DATABASE_URL)
