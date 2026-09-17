@@ -1,5 +1,4 @@
 import pytest
-from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
@@ -70,13 +69,13 @@ def db_session_factory(monkeypatch):
     engine.dispose()
 
 
-@pytest.fixture
-def client(db_session_factory, monkeypatch):
-    # Reset the in-memory match list so tests don't leak into each other.
-    monkeypatch.setitem(main.memory_db, "matches", [])
-    # No `with` block: entering the context would run the lifespan handler,
-    # which calls create_all against the real (Postgres) engine.
-    return TestClient(main.app)
+# @pytest.fixture
+# def client(db_session_factory, monkeypatch):
+#     # Reset the in-memory match list so tests don't leak into each other.
+#     monkeypatch.setitem(main.memory_db, "matches", [])
+#     # No `with` block: entering the context would run the lifespan handler,
+#     # which calls create_all against the real (Postgres) engine.
+#     return TestClient(main.app)
 
 
 def test_read_root(client):
