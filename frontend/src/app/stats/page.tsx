@@ -327,12 +327,8 @@ function StatsContent() {
                 <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Event Details</p>
                 <div className="mt-5 space-y-4 text-sm text-slate-300">
                   <div className="flex items-center justify-between">
-                    <span>Event</span>
-                    <strong>Midnight Showdown</strong>
-                  </div>
-                  <div className="flex items-center justify-between">
                     <span>Date</span>
-                    <strong>July 3, 2026</strong>
+                    <strong>{matchInfo?.date ? formatMatchDate(matchInfo.date) : "—"}</strong>
                   </div>
                   <div className="flex items-center justify-between">
                     <span>League</span>

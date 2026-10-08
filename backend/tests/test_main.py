@@ -84,17 +84,6 @@ def test_read_root(client):
     assert response.json() == {"message": "api is running"}
 
 
-def test_create_and_list_matches(client):
-    assert client.get("/matches").json() == {"matches": []}
-
-    response = client.post("/matches", json={"name": "United vs Liverpool"})
-    assert response.status_code == 200
-    assert response.json() == {"name": "United vs Liverpool"}
-
-    response = client.get("/matches")
-    assert response.json() == {"matches": [{"name": "United vs Liverpool"}]}
-
-
 def test_external_match_fetched_and_cached(client, db_session_factory, raw_api_payload, monkeypatch):
     calls = []
 

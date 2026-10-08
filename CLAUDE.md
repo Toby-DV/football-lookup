@@ -15,7 +15,7 @@ This repo is a personal learning project — the user is building it hands-on to
 This is a two-part demo app in one repo, developed as separate `frontend/` and `backend/` projects (no shared package manager or root-level tooling):
 
 - `frontend/` — Next.js 16 (App Router) + React 19 + TypeScript + Tailwind v4
-- `backend/` — FastAPI app that proxies to the API-Football external API, caches fetched match data in Postgres (SQLAlchemy), keeps a small in-memory "matches" list, and generates per-match narrative insights via the Claude API
+- `backend/` — FastAPI app that proxies to the API-Football external API, caches fetched match data in Postgres (SQLAlchemy), and generates per-match narrative insights via the Claude API
 
 There is a project-specific `frontend/CLAUDE.md` (which itself just points to `frontend/AGENTS.md`) — read it when working inside `frontend/`. It warns that this Next.js version has breaking changes vs. training data and to check `frontend/node_modules/next/dist/docs/` before writing Next.js code.
 
@@ -51,10 +51,14 @@ Backend requires a `backend/.env` file (gitignored) with `API_FOOTBALL_KEY` (use
 
 ## Architecture
 
-**Request flow:** `frontend/src/app/page.tsx` (client component) calls the FastAPI backend through the shared axios instance in `frontend/src/app/api.ts`, which is hardcoded to `http://127.0.0.1:8000`. The backend (`backend/main.py`) only allows CORS from `http://localhost:3000` and `http://localhost:5173` — update both the axios `baseURL` and the FastAPI `origins` list together if ports change.
+**Request flow:** the client components (`frontend/src/app/search/page.tsx`, `frontend/src/app/stats/page.tsx`) call the FastAPI backend through the shared axios instance in `frontend/src/app/api.ts`, whose `baseURL` is `process.env.NEXT_PUBLIC_API_BASE_URL ?? "/api/backend"`. All backend routes live on an `APIRouter` with `prefix="/api/backend"` in `backend/main.py`, so the base URL must include that prefix:
+- **Local:** `frontend/.env.local` (gitignored) → `NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8000/api/backend`. Without it, the relative fallback hits the Next.js dev server and every call 404s.
+- **Vercel:** no env var needed; the relative `/api/backend` fallback hits the same domain. The root `vercel.json` defines `frontend` and `backend` services and rewrites `/api/backend/*` to the backend service without stripping the prefix, which is why the FastAPI routes carry it.
+- `NEXT_PUBLIC_*` values are inlined at build/dev-server start, so restart `npm run dev` (or redeploy) after changing them.
 
-**Backend state — two layers:**
-- `memory_db` dict in `backend/main.py` backs `GET /matches` / `POST /matches` (a simple name list); it resets on every restart.
+The backend only allows CORS from `http://localhost:3000` and `http://localhost:5173`. On Vercel the frontend and backend share an origin, so CORS doesn't apply there. If local ports change, update the env var and the FastAPI `origins` list together.
+
+**Backend state (Postgres).** Paths below are relative to the `/api/backend` prefix.
 - Postgres backs `GET /matches/external?match_id=...`: `fetch_match_record()` returns the cached `MatchRecord` (table `matches`) or, on a miss, calls `api_client.fetch_match_data`, shapes the result with `extract_match_info`, and persists it. `match_record_to_dict()` builds the response, so cached and fresh responses are shape-identical. Tables are created by the app's lifespan handler (`Base.metadata.create_all`).
 - `GET /matches/insights?match_id=...` returns "what this game meant" bullets: cached in `MatchRecord.insights` (JSON-encoded list, `NULL` = not generated); on a miss it calls `insights_client.generate_match_insights` — slow (~15–60s, uses web search), which is why it's a separate endpoint the frontend calls after the stats render. Finished matches are immutable, so insights are generated once per match, ever.
 - `backend/database.py` owns the engine/`SessionLocal`/`Base` (reads `DATABASE_URL` at import time); `backend/db_models.py` defines `MatchRecord`.
@@ -65,7 +69,7 @@ Backend requires a `backend/.env` file (gitignored) with `API_FOOTBALL_KEY` (use
 
 **Tests (`backend/tests/`):**
 - `test_api_client.py` — the `extract_match_info` transform and `fetch_match_data` request/error behavior, with inline fixture payloads (`test_data.json` is an unused leftover).
-- `test_main.py` — endpoint tests via FastAPI `TestClient`, with `main.SessionLocal` monkeypatched to an in-memory SQLite engine and `main.fetch_match_data` / `main.generate_match_insights` monkeypatched directly — running tests requires neither Postgres nor any API key. It deliberately avoids using `TestClient` as a context manager so the lifespan handler never touches the real engine.
+- `test_main.py` — endpoint tests via FastAPI `TestClient` (request paths must include the `/api/backend` prefix), with `main.SessionLocal` monkeypatched to an in-memory SQLite engine and `main.fetch_match_data` / `main.generate_match_insights` monkeypatched directly — running tests requires neither Postgres nor any API key. It deliberately avoids using `TestClient` as a context manager so the lifespan handler never touches the real engine.
 - `test_insights_client.py` — mocks the `anthropic` client; covers prompt contents, JSON extraction from mixed content blocks, and the missing-key error.
 
 **Scope: finished matches only.** This project is not built to support live/in-progress matches — it only deals with completed fixtures. That assumption is why match data (scoreline, possession, venue, teams) is treated as immutable and safe to cache indefinitely once fetched: there's no live state to keep in sync, no polling for score updates, and no need for cache invalidation/TTLs. Don't add live-match features (polling, websockets, "in-play" status handling) without revisiting this assumption first.
